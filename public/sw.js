@@ -1,4 +1,6 @@
-const CACHE = "mini-piyofit-v1";
+// 保存名は 登録時の ?v=（ビルドごとの 版番号）から つくる。
+// 新しく 公開すると 名前が かわり、activate で 古い 保存分を ぜんぶ 消す
+const CACHE = "mini-piyofit-" + (new URL(self.location.href).searchParams.get("v") || "dev");
 
 self.addEventListener("install", (e) => {
   // 即座に新SWを適用
