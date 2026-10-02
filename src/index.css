@@ -235,11 +235,15 @@ button:disabled { cursor: default; }
 .pet.is-weak .pet-img { animation: none; filter: saturate(0.5) brightness(0.95); transform: scaleY(0.9); }
 .floater {
   position: absolute;
-  top: 18%;
+  top: 16%;
+  z-index: 3;
   color: var(--heart);
   pointer-events: none;
-  animation: float-up 0.9s ease-out forwards;
+  opacity: 0;
+  filter: drop-shadow(0 2px 0 #fff);
+  animation: float-up 1s ease-out forwards;
 }
+.floater.is-sparkle { color: var(--yolk-lo); }
 .poop {
   position: absolute;
   width: 15%;
@@ -624,7 +628,11 @@ button:disabled { cursor: default; }
 @keyframes squish { 0% { scale: 1.08 0.9; } 100% { scale: 1 1; } }
 @keyframes sway { 0% { rotate: 0deg; } 15% { rotate: -12deg; } 35% { rotate: 10deg; } 55% { rotate: -7deg; } 75% { rotate: 4deg; } 100% { rotate: 0deg; } }
 @keyframes waddle { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-5px) rotate(4deg); } }
-@keyframes float-up { from { opacity: 1; transform: translate(-50%, 0) scale(0.8); } to { opacity: 0; transform: translate(-50%, -70px) scale(1.2); } }
+@keyframes float-up {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.4); }
+  20% { opacity: 1; transform: translate(calc(-50% + var(--dx, 0px) * 0.4), -14px) scale(1.15); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), -90px) scale(1); }
+}
 @keyframes plop { from { transform: scale(0.3); } 70% { transform: scale(1.15); } to { transform: scale(1); } }
 @keyframes bubble-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes blink { 50% { opacity: 0.35; } }
@@ -641,8 +649,11 @@ button:disabled { cursor: default; }
   to { transform: translate(var(--drift), 105vh) rotate(var(--rot)); }
 }
 
+/* 動きを へらす 設定：ずっと つづく 動き（歩く・はねる・回る・紙ふぶき）だけ とめる。
+   なでた ときの ゆれや ハートは 短い 反応なので のこす（とめると なでても 何も おきなく 見える） */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+  .pet-img, .pet.is-egg .pet-img, .pet-img.is-walking, .scene-pet, .rays, .meter-hearts.is-low, .ex-buddy-img { animation: none !important; }
+  .pet { transition: none !important; }
   .confetti { display: none; }
 }
 

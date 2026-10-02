@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useGame, todayReps } from "../game/store";
 import { HATCH_AFTER_MS, hearts, nextStageOf, stageFor, stageOf } from "../game/rules";
 import { idleLine } from "../game/lines";
-import { IconHand, IconHeart } from "./icons";
+import { IconHand, IconHeart, IconSparkle } from "./icons";
 import { PetFigure } from "./PetFigure";
 import { asset } from "../asset";
 
@@ -39,7 +39,7 @@ export function Room({ onPat }: { onPat: () => void }) {
   const today = useGame(todayReps);
   const stage = stageOf(pet);
   const next = nextStageOf(pet);
-  const [floaters, setFloaters] = useState<{ id: number; x: number }[]>([]);
+  const [floaters, setFloaters] = useState<{ id: number; x: number; dx: number; delay: number; kind: "heart" | "sparkle" }[]>([]);
   const [bump, setBump] = useState(0);
   const idRef = useRef(0);
 
@@ -107,8 +107,16 @@ export function Room({ onPat }: { onPat: () => void }) {
   const tap = (e: React.PointerEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const id = ++idRef.current;
-    setFloaters((f) => [...f, { id, x: e.clientX - r.left }]);
-    setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== id)), 900);
+    // よろこびの ハートを 3つと きらきらを 1つ、はじけるように だす
+    const x = e.clientX - r.left;
+    const burst = [
+      { dx: -26, delay: 0, kind: "heart" as const },
+      { dx: 4, delay: 90, kind: "heart" as const },
+      { dx: 30, delay: 170, kind: "heart" as const },
+      { dx: -6, delay: 60, kind: "sparkle" as const },
+    ].map((b, i) => ({ ...b, id: id * 10 + i, x }));
+    setFloaters((f) => [...f, ...burst]);
+    setTimeout(() => setFloaters((f) => f.filter((v) => !burst.some((b) => b.id === v.id))), 1300);
     setBump((b) => b + 1);
     // なでられたら その場で 立ちどまって ゆれる
     const area = petRef.current?.parentElement?.getBoundingClientRect();
@@ -146,8 +154,12 @@ export function Room({ onPat }: { onPat: () => void }) {
             </span>
           </span>
           {floaters.map((f) => (
-            <span key={`f${f.id}`} className="floater" style={{ left: f.x }}>
-              <IconHeart size={22} filled />
+            <span
+              key={`f${f.id}`}
+              className={`floater is-${f.kind}`}
+              style={{ left: f.x, "--dx": `${f.dx}px`, animationDelay: `${f.delay}ms` } as React.CSSProperties}
+            >
+              {f.kind === "heart" ? <IconHeart size={26} filled /> : <IconSparkle size={24} />}
             </span>
           ))}
         </button>
