@@ -7,6 +7,7 @@ import { playCheerSfx, playClickSfx, playDenySfx, playEatingSfx } from "../sfx/s
 import { IconBento, IconCake, IconClose, IconCoin, IconOnigiri, IconRing } from "./icons";
 import { PetFigure } from "./PetFigure";
 import { ObstacleRun } from "./ObstacleRun";
+import { asset } from "../asset";
 
 const FOOD_ICON: Record<string, (p: { size?: number }) => JSX.Element> = {
   onigiri: IconOnigiri,
@@ -124,7 +125,7 @@ function OutfitList() {
           return (
             <li key={o.id}>
               <button type="button" className={`good${wearing === o.id ? " is-on" : ""}`} onClick={() => tap(o.id, o.price)}>
-                <img className="good-img" src={`/outfit_${o.id}.webp`} alt="" />
+                <img className="good-img" src={asset(`outfit_${o.id}.webp`)} alt="" />
                 <span className="good-name">{o.name}</span>
                 {has ? (
                   <span className="good-state">{wearing === o.id ? "つけてる" : "もってる"}</span>
@@ -173,10 +174,10 @@ function Scene({ place, result, onBack }: { place: Place; result: OutingResult; 
   const propose = useGame((s) => s.propose);
   const canPropose = place.id === "date" && (pet.partner?.bond ?? 0) >= BOND_TO_PROPOSE;
   return (
-    <div className="scene" style={{ backgroundImage: `url(${place.bg})` }}>
+    <div className="scene" style={{ backgroundImage: `url(${asset(place.bg)})` }}>
       <div className="scene-cast">
         <PetFigure className="scene-pet" />
-        {place.host && <img className="scene-host" src={place.host} alt="" />}
+        {place.host && <img className="scene-host" src={asset(place.host)} alt="" />}
       </div>
       <div className="scene-text">
         <p className="scene-place">{place.name}</p>
@@ -268,7 +269,7 @@ export function OutingPanel({ onClose }: { onClose: () => void }) {
                     className={`place${p.id === "date" ? " is-date" : ""}`}
                     onClick={() => go(p)}
                     aria-disabled={left <= 0 || coins < p.price}
-                    style={{ backgroundImage: `url(${p.bg})` }}
+                    style={{ backgroundImage: `url(${asset(p.bg)})` }}
                   >
                     <span className="place-text">
                       <span className="place-name">{p.name}</span>

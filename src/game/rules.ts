@@ -31,16 +31,16 @@ export interface Stage {
   img: string;
 }
 
-export const EGG: Stage = { id: "egg", label: "たまご", at: 0, img: "/piyo_egg.webp" };
+export const EGG: Stage = { id: "egg", label: "たまご", at: 0, img: "piyo_egg.webp" };
 
 /** かえってからの 段階。回数（そだち）で あがる */
 export const STAGES: Stage[] = [
-  { id: "hiyoko", label: "ひよこ", at: 0, img: "/piyo.webp" },
-  { id: "kinder", label: "ようちえん", at: 40, img: "/piyo_child.webp" },
-  { id: "elementary", label: "しょうがくせい", at: 100, img: "/piyo_student.webp" },
-  { id: "junior", label: "ちゅうがくせい", at: 180, img: "/piyo_teen.webp" },
-  { id: "high", label: "こうこうせい", at: 280, img: "/piyo_youth.webp" },
-  { id: "adult", label: "おとな", at: 400, img: "/piyo_graduated.webp" },
+  { id: "hiyoko", label: "ひよこ", at: 0, img: "piyo.webp" },
+  { id: "kinder", label: "ようちえん", at: 40, img: "piyo_child.webp" },
+  { id: "elementary", label: "しょうがくせい", at: 100, img: "piyo_student.webp" },
+  { id: "junior", label: "ちゅうがくせい", at: 180, img: "piyo_teen.webp" },
+  { id: "high", label: "こうこうせい", at: 280, img: "piyo_youth.webp" },
+  { id: "adult", label: "おとな", at: 400, img: "piyo_graduated.webp" },
 ];
 
 export function stageFor(reps: number): Stage {

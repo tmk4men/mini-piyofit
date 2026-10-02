@@ -4,8 +4,9 @@
  * mp3 の エンコーダパディングによる 隙間が 出ない（ギャップレスループ）。
  */
 import { getEngineCtx, getEngineMaster, isEngineRunning, resumeEngine, setAutoResumeGuard, setInterruptEndHandler } from "./engine";
+import { asset } from "../asset";
 
-const SRC = "/bgm/new-bgm.mp3";
+const SRC = asset("bgm/new-bgm.mp3");
 const STORAGE_KEY_BGM = "mini-piyofit-bgm-muted";
 const STORAGE_KEY_SFX = "mini-piyofit-sfx-muted";
 const BGM_GAIN = 0.25;

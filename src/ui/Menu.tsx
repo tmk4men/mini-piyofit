@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGame } from "../game/store";
 import { isBgmMuted, isSfxMuted, toggleBgm, toggleSfx } from "../sfx/bgm";
 import { IconBook, IconClose, IconMusic, IconQuestion, IconRestart, IconSpeaker } from "./icons";
+import { asset } from "../asset";
 
 type View = "menu" | "album" | "reset";
 
@@ -65,7 +66,7 @@ export function Menu({ onClose, onHelp }: { onClose: () => void; onHelp: () => v
             <ul className="album">
               {album.map((a) => (
                 <li key={a.endedAt}>
-                  <img src={a.ending === "runaway" ? "/piyo_egg.webp" : "/piyo_graduated.webp"} alt="" />
+                  <img src={asset(a.ending === "runaway" ? "piyo_egg.webp" : "piyo_graduated.webp")} alt="" />
                   <div>
                     <p className="album-name">
                       {a.gen}だいめ <b>{a.name}</b>

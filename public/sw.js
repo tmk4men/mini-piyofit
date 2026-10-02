@@ -7,7 +7,7 @@ self.addEventListener("install", (e) => {
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(["/manifest.webmanifest", "/icon.svg"]))
+      .then((c) => c.addAll(["./manifest.webmanifest", "./icon.svg"]))
       .catch(() => {}),
   );
 });
@@ -41,7 +41,7 @@ self.addEventListener("fetch", (e) => {
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
           return res;
         })
-        .catch(() => caches.match(req).then((c) => c || caches.match("/"))),
+        .catch(() => caches.match(req).then((c) => c || caches.match("./"))),
     );
     return;
   }
@@ -61,54 +61,5 @@ self.addEventListener("fetch", (e) => {
           })
           .catch(() => cached),
     ),
-  );
-});
-
-// Web Push：サーバーから送られてきた通知を表示する
-self.addEventListener("push", (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = { title: "ぴよふぃっと", body: event.data ? event.data.text() : "" };
-  }
-  const title = data.title || "ぴよふぃっと";
-  const options = {
-    body: data.body || "",
-    icon: data.icon || "/icon-192.png",
-    badge: data.badge || "/icon-192.png",
-    tag: data.tag || "piyofit",
-    renotify: true,
-    data: { url: data.url || "/" },
-  };
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// 通知クリックで アプリを前面に（開いてなければ開く）
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || "/";
-  event.waitUntil(
-    (async () => {
-      const all = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      for (const client of all) {
-        if (client.url.endsWith(target) || client.url.includes(target)) {
-          return client.focus();
-        }
-      }
-      if (self.clients.openWindow) {
-        return self.clients.openWindow(target);
-      }
-    })(),
-  );
-});
-
-// サブスクリプションがリフレッシュされたときの再登録は、
-// クライアント側（pushmanager.subscribe）で扱う想定
-self.addEventListener("pushsubscriptionchange", (event) => {
-  event.waitUntil(
-    self.registration.pushManager
-      .subscribe({ userVisibleOnly: true })
-      .catch(() => {}),
   );
 });

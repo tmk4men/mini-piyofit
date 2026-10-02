@@ -85,10 +85,10 @@ export interface Place {
 }
 
 export const PLACES: Place[] = [
-  { id: "grandpa", name: "おじいちゃんの いえ", note: "のんびり おはなし。きげんが ふえる", price: 0, bg: "/grandpa_house.webp", host: "/grandpa.webp" },
-  { id: "dagashi", name: "だがしや", note: "おかしを かって たべる", price: 20, bg: "/dagashi_shop.webp", host: "/dagashi_oba.webp" },
-  { id: "field", name: "はらっぱ", note: "しょうがいぶつ きょうそう。こえた ぶん コイン", price: 0, bg: "/play-bg.webp", host: null },
-  { id: "date", name: "であいの おうち", note: "すてきな あいてに あいに いく", price: 0, bg: "/partner_house.webp", host: "/piyo_partner.webp" },
+  { id: "grandpa", name: "おじいちゃんの いえ", note: "のんびり おはなし。きげんが ふえる", price: 0, bg: "grandpa_house.webp", host: "grandpa.webp" },
+  { id: "dagashi", name: "だがしや", note: "おかしを かって たべる", price: 20, bg: "dagashi_shop.webp", host: "dagashi_oba.webp" },
+  { id: "field", name: "はらっぱ", note: "しょうがいぶつ きょうそう。こえた ぶん コイン", price: 0, bg: "play-bg.webp", host: null },
+  { id: "date", name: "であいの おうち", note: "すてきな あいてに あいに いく", price: 0, bg: "partner_house.webp", host: "piyo_partner.webp" },
 ];
 
 export const PARTNER_NAMES = ["ぴよみ", "ひなこ", "ことり", "もも", "ぽぽ", "すず"];

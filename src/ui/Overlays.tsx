@@ -4,6 +4,7 @@ import { STAGES } from "../game/rules";
 import { playCheerSfx } from "../sfx/sfx";
 import { useEffect } from "react";
 import { WEDDING_GIFT, REP_COINS } from "../game/economy";
+import { asset } from "../asset";
 
 const CONFETTI_COLORS = ["#FFCD57", "#F06A8E", "#A8DFC2", "#8EC9F0", "#FFFFFF"];
 
@@ -51,7 +52,7 @@ function GrewCard({ o, onClose }: { o: Extract<Overlay, { kind: "grew" }>; onClo
   return (
     <div className="card card-grew">
       <div className="rays" aria-hidden="true" />
-      <img className="card-img pop" src={adult ? "/piyo_ending.webp" : o.stage.img} alt="" />
+      <img className="card-img pop" src={asset(adult ? "piyo_ending.webp" : o.stage.img)} alt="" />
       <p className="card-kicker">{hatched ? "たまごが" : adult ? "そつぎょう" : "おおきくなった"}</p>
       <h2 className="card-title">{hatched ? "かえった！" : `${o.stage.label}に なった！`}</h2>
       {adult && <p className="card-text">おでかけの「であいの おうち」に いけるように なったよ。3にち たつと ひとりだち するみたい</p>}
@@ -77,7 +78,7 @@ function NameCard({ onClose }: { onClose: () => void }) {
         done();
       }}
     >
-      <img className="card-img small" src="/piyo.webp" alt="" />
+      <img className="card-img small" src={asset("piyo.webp")} alt="" />
       <h2 className="card-title">なまえを つけてね</h2>
       <input
         className="name-input"
@@ -107,8 +108,8 @@ function EndingCard({ o, onClose }: { o: Extract<Overlay, { kind: "ending" }>; o
       <div className="card card-marry">
         <div className="rays" aria-hidden="true" />
         <div className="couple">
-          <img className="pop" src="/piyo_graduated.webp" alt="" />
-          <img className="pop" src="/piyo_partner.webp" alt="" />
+          <img className="pop" src={asset("piyo_graduated.webp")} alt="" />
+          <img className="pop" src={asset("piyo_partner.webp")} alt="" />
         </div>
         <p className="card-kicker">
           {e.gen}だいめ {e.name} と {e.spouse}
@@ -127,7 +128,7 @@ function EndingCard({ o, onClose }: { o: Extract<Overlay, { kind: "ending" }>; o
   return (
     <div className={`card ${leave ? "card-leave" : "card-runaway"}`}>
       {leave ? (
-        <img className="card-img walk-away" src="/piyo_graduated.webp" alt="" />
+        <img className="card-img walk-away" src={asset("piyo_graduated.webp")} alt="" />
       ) : (
         <div className="letter" aria-hidden="true">
           <span>さがさないでね</span>

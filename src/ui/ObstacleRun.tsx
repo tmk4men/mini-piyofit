@@ -4,6 +4,7 @@ import { stageOf } from "../game/rules";
 import { PLAY_COIN_PER_OBSTACLE, PLAY_MAX_COINS } from "../game/economy";
 import { playCheerSfx, playDenySfx, playRepSfx } from "../sfx/sfx";
 import { IconCoin } from "./icons";
+import { asset } from "../asset";
 
 // 元の ぴよふぃっと の しょうがいぶつ きょうそう。
 // 物理は 1/60秒の 固定ステップで すすめる（120Hz の 端末で 2倍速に ならないように）
@@ -91,13 +92,13 @@ export function ObstacleRun({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     const img = new Image();
-    img.src = stageOf(pet).img;
+    img.src = asset(stageOf(pet).img);
     img.onload = () => {
       imgRef.current = img;
       draw();
     };
     const bg = new Image();
-    bg.src = "/play-bg.webp";
+    bg.src = asset("play-bg.webp");
     bg.onload = () => {
       bgRef.current = bg;
       draw();

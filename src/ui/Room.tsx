@@ -4,6 +4,7 @@ import { HATCH_AFTER_MS, hearts, nextStageOf, stageFor, stageOf } from "../game/
 import { idleLine } from "../game/lines";
 import { IconHand, IconHeart } from "./icons";
 import { PetFigure } from "./PetFigure";
+import { asset } from "../asset";
 
 function Hearts({ label, value }: { label: string; value: number }) {
   const n = hearts(value);
@@ -80,7 +81,7 @@ export function Room({ onPat }: { onPat: () => void }) {
         </p>
 
         {POOP_SPOTS.slice(0, pet.poops).map((p, i) => (
-          <img key={`poop${i}`} className="poop" src="/piyo_poop.webp" alt="うんち" style={p} />
+          <img key={`poop${i}`} className="poop" src={asset("piyo_poop.webp")} alt="うんち" style={p} />
         ))}
 
         <button

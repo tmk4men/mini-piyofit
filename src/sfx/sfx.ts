@@ -1,5 +1,6 @@
 import { isSfxMuted, isBgmActive, bgmShouldPlay } from "./bgm";
 import { getEngineCtx, getEngineMaster, suspendEngine } from "./engine";
+import { asset } from "../asset";
 
 let unlocked = false;
 let idleSuspendTimer: ReturnType<typeof setTimeout> | null = null;
@@ -202,10 +203,10 @@ function playSample(src: string, volume = 0.85, opts?: { maxMs?: number }) {
   }
 }
 
-const SFX_PET = "/sfx/piyo-chirp.mp3";
-const SFX_EATING = "/sfx/eating.mp3";
-const SFX_CLICK = "/sfx/click.mp3";
-const SFX_CLEAN = "/sfx/clean.mp3";
+const SFX_PET = asset("sfx/piyo-chirp.mp3");
+const SFX_EATING = asset("sfx/eating.mp3");
+const SFX_CLICK = asset("sfx/click.mp3");
+const SFX_CLEAN = asset("sfx/clean.mp3");
 
 export function preloadAllSfx() {
   [SFX_PET, SFX_EATING, SFX_CLICK, SFX_CLEAN].forEach(preloadSfx);
