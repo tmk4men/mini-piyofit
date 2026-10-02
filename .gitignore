@@ -1,0 +1,56 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.vite
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.claude
+.vercel
+効果音/
+画像/
+
+# Capacitor Android build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/release/
+android/app/debug/
+android/captures/
+# これは cap sync で再生成されるのでコミットしない
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+*.jks
+*.keystore
+
+# Capacitor iOS build artifacts（ios/ は Mac の setup-ios.sh で生成する）
+ios/App/Pods/
+ios/App/Podfile.lock
+ios/App/public/
+ios/App/App/capacitor.config.json
+ios/App/App/config.xml
+ios/DerivedData/
+ios/App/App/Assets.xcassets/AppIcon.appiconset/
+ios/App/output/
+*.xcarchive
+*.ipa
+
+# 検証用
+verify/node_modules/
+verify/shots/
+verify/keep/
+verify/r*.png
+verify/review-out.txt
+verify/rules.mjs
+verify/economy.mjs
+verify/review*.md
+verify/assets-sheet.png
+
+# ネイティブ化は未着手（元のぴよふぃっとの設定のまま）
+android/
+ios/
