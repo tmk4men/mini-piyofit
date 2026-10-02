@@ -205,13 +205,20 @@ button:disabled { cursor: default; }
   position: absolute;
   left: 50%;
   bottom: 5%;
-  width: min(64%, 270px);
+  width: min(58%, 250px);
   aspect-ratio: 1;
   padding: 0;
   border: 0;
   background: none;
   transform: translateX(-50%);
+  transition-property: left;
+  transition-timing-function: linear;
 }
+.pet-face { display: block; width: 100%; height: 100%; transition: transform 0.25s ease; }
+.pet-face.is-left { transform: scaleX(-1); }
+.pet-sway { display: block; width: 100%; height: 100%; transform-origin: 50% 92%; }
+.pet-sway.is-swaying { animation: sway 0.9s ease-out; }
+.pet-img.is-walking { animation: waddle 0.5s ease-in-out infinite; }
 .figure { position: relative; display: block; }
 .figure-body { display: block; width: 100%; height: 100%; object-fit: contain; }
 .figure-outfit { position: absolute; left: 50%; height: auto; transform: translateX(-50%); pointer-events: none; filter: drop-shadow(0 1px 1px rgba(110, 78, 60, 0.25)); }
@@ -219,12 +226,12 @@ button:disabled { cursor: default; }
   width: 100%;
   height: 100%;
   transform-origin: 50% 92%;
-  animation: hop 2.4s ease-in-out infinite, squish 0.35s ease-out;
+  animation: hop 2.4s ease-in-out infinite;
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
 }
-.pet.is-egg .pet-img { animation: wobble 3s ease-in-out infinite, squish 0.35s ease-out; }
+.pet.is-egg .pet-img { animation: wobble 3s ease-in-out infinite; }
 .pet.is-weak .pet-img { animation: none; filter: saturate(0.5) brightness(0.95); transform: scaleY(0.9); }
 .floater {
   position: absolute;
@@ -615,6 +622,8 @@ button:disabled { cursor: default; }
 @keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes wobble { 0%, 70%, 100% { transform: rotate(0); } 76% { transform: rotate(-6deg); } 84% { transform: rotate(5deg); } 92% { transform: rotate(-3deg); } }
 @keyframes squish { 0% { scale: 1.08 0.9; } 100% { scale: 1 1; } }
+@keyframes sway { 0% { rotate: 0deg; } 15% { rotate: -12deg; } 35% { rotate: 10deg; } 55% { rotate: -7deg; } 75% { rotate: 4deg; } 100% { rotate: 0deg; } }
+@keyframes waddle { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-5px) rotate(4deg); } }
 @keyframes float-up { from { opacity: 1; transform: translate(-50%, 0) scale(0.8); } to { opacity: 0; transform: translate(-50%, -70px) scale(1.2); } }
 @keyframes plop { from { transform: scale(0.3); } 70% { transform: scale(1.15); } to { transform: scale(1); } }
 @keyframes bubble-in { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }

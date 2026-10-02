@@ -20,6 +20,13 @@ function Hearts({ label, value }: { label: string; value: number }) {
   );
 }
 
+/** あるける 範囲（ぴよこの まんなかの 位置、画面の 幅に たいする %） */
+const WALK_MIN = 30;
+const WALK_MAX = 70;
+/** 1% すすむのに かかる 時間 */
+const WALK_MS_PER_PERCENT = 110;
+const REDUCED_MOTION = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 const POOP_SPOTS = [
   { left: "14%", bottom: "16%" },
   { left: "74%", bottom: "12%" },
@@ -64,12 +71,53 @@ export function Room({ onPat }: { onPat: () => void }) {
       ? (pet.reps - prevFloor) / (next.at - prevFloor)
       : 1;
 
+  // 部屋の なかを あるきまわる。たまご・げんきが ない とき・動きを へらす 設定 では まんなかに いる
+  const petRef = useRef<HTMLButtonElement>(null);
+  const [walk, setWalk] = useState({ x: 50, ms: 0, walking: false, facing: 1 });
+  const xRef = useRef(50);
+  const pauseUntil = useRef(0);
+  const still = isEgg || weak || REDUCED_MOTION;
+  useEffect(() => {
+    if (still) {
+      xRef.current = 50;
+      setWalk({ x: 50, ms: 600, walking: false, facing: 1 });
+      return;
+    }
+    let t: ReturnType<typeof setTimeout>;
+    const next = () => {
+      if (Date.now() < pauseUntil.current) {
+        t = setTimeout(next, 600);
+        return;
+      }
+      const from = xRef.current;
+      let to = WALK_MIN + Math.random() * (WALK_MAX - WALK_MIN);
+      if (Math.abs(to - from) < 10) to = from < 50 ? from + 18 : from - 18;
+      const ms = Math.abs(to - from) * WALK_MS_PER_PERCENT;
+      xRef.current = to;
+      setWalk({ x: to, ms, walking: true, facing: to < from ? -1 : 1 });
+      t = setTimeout(() => {
+        setWalk((w) => ({ ...w, walking: false }));
+        t = setTimeout(next, 1500 + Math.random() * 3500);
+      }, ms);
+    };
+    t = setTimeout(next, 1500);
+    return () => clearTimeout(t);
+  }, [still]);
+
   const tap = (e: React.PointerEvent) => {
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const id = ++idRef.current;
     setFloaters((f) => [...f, { id, x: e.clientX - r.left }]);
     setTimeout(() => setFloaters((f) => f.filter((x) => x.id !== id)), 900);
     setBump((b) => b + 1);
+    // なでられたら その場で 立ちどまって ゆれる
+    const area = petRef.current?.parentElement?.getBoundingClientRect();
+    if (area && walk.walking) {
+      const here = ((r.left + r.width / 2 - area.left) / area.width) * 100;
+      xRef.current = here;
+      setWalk((w) => ({ ...w, x: here, ms: 0, walking: false }));
+    }
+    pauseUntil.current = Date.now() + 2500;
     onPat();
   };
 
@@ -85,12 +133,18 @@ export function Room({ onPat }: { onPat: () => void }) {
         ))}
 
         <button
+          ref={petRef}
           type="button"
           className={`pet${weak ? " is-weak" : ""}${isEgg ? " is-egg" : ""}`}
           onPointerDown={tap}
           aria-label={isEgg ? "たまごを なでる" : "なでる"}
+          style={{ left: `${walk.x}%`, transitionDuration: `${walk.ms}ms` }}
         >
-          <PetFigure key={`img${bump}`} className="pet-img" />
+          <span className={`pet-face${walk.facing < 0 ? " is-left" : ""}`}>
+            <span key={`sway${bump}`} className={`pet-sway${bump > 0 ? " is-swaying" : ""}`}>
+              <PetFigure className={`pet-img${walk.walking ? " is-walking" : ""}`} />
+            </span>
+          </span>
           {floaters.map((f) => (
             <span key={`f${f.id}`} className="floater" style={{ left: f.x }}>
               <IconHeart size={22} filled />

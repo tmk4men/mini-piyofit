@@ -1,0 +1,22 @@
+const { webkit } = require('playwright-core');
+const path = require('path');
+(async () => {
+  const b = await webkit.launch({ executablePath: path.join(process.env.LOCALAPPDATA, 'ms-playwright', 'webkit-2336', 'Playwright.exe') });
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+  const p = await ctx.newPage();
+  const logs = [];
+  p.on('pageerror', (e) => logs.push('pageerror ' + e.message));
+  p.on('requestfailed', (r) => logs.push('failed ' + r.url()));
+  await p.goto('https://tmk4men.github.io/mini-piyofit/');
+  await p.waitForTimeout(2500);
+  await p.getByText('はじめる').click();
+  await p.waitForTimeout(11500);
+  await p.screenshot({ path: 'shots/wkpub-hatch.png' });
+  await p.getByText('やったね').click();
+  await p.locator('.name-input').fill('ぴよすけ');
+  await p.getByText('これにする').click();
+  await p.waitForTimeout(800);
+  await p.screenshot({ path: 'shots/wkpub-home.png' });
+  console.log('LOGS', logs.length ? logs.join('\n') : 'none');
+  await b.close();
+})();
