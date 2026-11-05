@@ -22,6 +22,7 @@ import {
 import type { ExerciseKind } from "./pose/exercise";
 import { playCleanSfx, playClickSfx, playPetSfx, preloadAllSfx, unlockAudio } from "./sfx/sfx";
 import { pauseBgm, resumeBgm, startBgm } from "./sfx/bgm";
+import { askNotifyAfterMeal, onLeave, onOpen } from "./native/sync";
 
 function ToyButton({
   label,
@@ -67,12 +68,16 @@ export default function App() {
 
   useEffect(() => {
     g().sync();
+    void onOpen();
     const t = setInterval(() => g().sync(), 1000);
     const vis = () => {
-      if (document.hidden) pauseBgm();
-      else {
+      if (document.hidden) {
+        pauseBgm();
+        void onLeave();
+      } else {
         g().sync();
         resumeBgm();
+        void onOpen();
       }
     };
     document.addEventListener("visibilitychange", vis);
@@ -117,6 +122,11 @@ export default function App() {
     g().setMode(mode === m ? "home" : m);
   };
   const home = () => g().setMode("home");
+
+  const firstMeal = useGame((s) => s.firstMeal);
+  useEffect(() => {
+    if (firstMeal) askNotifyAfterMeal();
+  }, [firstMeal]);
 
   const exercising = mode === "exercise";
   const top = overlays[0];
@@ -172,19 +182,19 @@ export default function App() {
             </>
           ) : (
             <>
-              <ToyButton label="おみせ" size="small" onPress={() => toggle("shop")} disabled={blocked} active={mode === "shop"}>
+              <ToyButton label="おみせ" size="small" onPress={() => toggle("shop")} disabled={blocked || !!pet.away} active={mode === "shop"}>
                 <IconBag size={22} />
               </ToyButton>
-              <ToyButton label="ごはん" onPress={() => toggle("food")} disabled={blocked} active={mode === "food"}>
+              <ToyButton label="ごはん" onPress={() => toggle("food")} disabled={blocked || !!pet.away} active={mode === "food"}>
                 <IconBowl size={28} />
               </ToyButton>
               <ToyButton label="うんどう" size="big" onPress={() => g().setMode("exercise")} disabled={blocked}>
                 <IconDumbbell size={36} />
               </ToyButton>
-              <ToyButton label="そうじ" onPress={onClean} disabled={blocked || mode !== "home"}>
+              <ToyButton label="そうじ" onPress={onClean} disabled={blocked || mode !== "home" || !!pet.away}>
                 <IconSparkle size={28} />
               </ToyButton>
-              <ToyButton label="おでかけ" size="small" onPress={() => toggle("outing")} disabled={blocked} active={mode === "outing"}>
+              <ToyButton label="おでかけ" size="small" onPress={() => toggle("outing")} disabled={blocked || !!pet.away} active={mode === "outing"}>
                 <IconTrip size={22} />
               </ToyButton>
             </>

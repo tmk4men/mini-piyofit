@@ -791,3 +791,20 @@ button:disabled { cursor: default; }
 .run-title { margin: 0; font-family: var(--font-pop); font-size: 20px; }
 .run-note { margin: 0; font-size: 12px; font-weight: 700; line-height: 1.5; }
 .run-help { margin: 0; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+
+/* いなくならない・課金の入り口 */
+.away-note { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) rotate(-3deg); }
+.pet.is-waiting { bottom: 44%; }
+.pet.is-waiting .pet-img { width: 62%; margin: 0 auto; }
+.card-figure { display: block; position: relative; width: 112px; margin: 0 auto 8px; }
+.card-figure .figure-body { width: 100%; display: block; }
+.card-links { display: flex; justify-content: center; gap: 14px; margin-top: 2px; }
+.text-btn { min-height: 44px; padding: 8px 6px; border: 0; background: none; color: var(--ink-soft); font: inherit; font-size: 13px; font-weight: 700; }
+.silhouette { filter: brightness(0) opacity(.72); }
+.card-paywall .pill { width: 100%; }
+.card-delivery .card-kicker { font-size: 15px; }
+.menu-note { margin: 0; padding: 10px 12px; border-radius: 12px; background: #fff1d1; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.menu-list { max-height: 62vh; overflow-y: auto; }
+.away-note .letter { width: 168px; height: auto; padding: 22px 12px; white-space: nowrap; text-align: center; }
+.card .text-btn { display: block; margin-left: auto; margin-right: auto; }
+.card-links .text-btn { margin: 0; }

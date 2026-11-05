@@ -6,8 +6,9 @@ const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 export function idleLine(pet: Pet): string {
   const stage = stageOf(pet);
   if (stage.id === "egg") return "…コツコツ。もうすぐ うまれそう";
-  if (pet.hunger < 10) return "おなか ぺこぺこ… このままだと いえで しちゃう";
-  if (pet.mood < 10) return "もう しらない。いえで しちゃうよ";
+  if (pet.hunger <= 0 || pet.mood <= 0) return "まどの そとを みてた。まってたよ";
+  if (pet.hunger < 10) return "おなか ぺこぺこ…";
+  if (pet.mood < 10) return "さみしかったよ";
   if (pet.hunger < 25) return "おなか すいた…ごはん ほしい";
   if (pet.poops >= 2) return "うんち いっぱい。くさいよ〜";
   if (pet.mood < 25) return "つまんない。いっしょに うんどうしよ";

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { addReps, clean, newPet, pat, isEgg, STAGES, tick, type Ending, type Pet, type Stage } from "./rules";
+import { addReps, claimSteps, clean, FREE_REPS_LIMIT, newPet, pat, isEgg, STAGES, stageOf, tick, type Ending, type Pet, type Stage } from "./rules";
 import {
   BOND_TO_PROPOSE,
   canEat,
@@ -32,7 +32,11 @@ export interface AlbumEntry {
 export type Overlay =
   | { kind: "name" }
   | { kind: "grew"; stage: Stage }
-  | { kind: "ending"; ending: Ending; entry: AlbumEntry };
+  | { kind: "ending"; ending: Ending; entry: AlbumEntry }
+  | { kind: "askSteps" }
+  | { kind: "delivery"; units: number }
+  | { kind: "back" }
+  | { kind: "paywall" };
 
 export type Mode = "home" | "exercise" | "shop" | "food" | "outing";
 
@@ -50,6 +54,18 @@ interface GameState {
   today: { day: string; reps: number };
   outings: { day: string; n: number };
   seenHelp: boolean;
+  /** つづきを 買った（次の 世代にも 引きつぐ） */
+  unlocked: boolean;
+  /** 課金の 入り口を 一度 見せた */
+  paywallShown: boolean;
+  /** 歩数の 案内を 出した */
+  stepsAsked: boolean;
+  /** 歩数を この日から 受け取る */
+  stepsFrom: string | null;
+  /** 日ごとに 受け取った 1000歩の 数 */
+  stepsClaimed: Record<string, number>;
+  /** はじめて ごはんを あげた（通知の 許可は そのあとで 聞く） */
+  firstMeal: boolean;
   /** 保存しない一時状態 */
   mode: Mode;
   overlays: Overlay[];
@@ -70,6 +86,11 @@ interface GameState {
   setMode: (m: Mode) => void;
   say: (text: string) => void;
   markHelpSeen: () => void;
+  answerSteps: (allowed: boolean) => void;
+  receiveSteps: (totals: { day: string; steps: number }[]) => void;
+  showPaywall: () => void;
+  unlock: () => void;
+  devAdvance: (hours: number) => void;
   resetAll: () => void;
 }
 
@@ -89,7 +110,7 @@ function finish(s: GameState, pet: Pet, ending: Ending, now: number): Partial<Ga
     spouse: ending === "marry" ? pet.partner?.name : undefined,
   };
   return {
-    pet: newPet(pet.gen + 1, now),
+    pet: newPet(pet.gen + 1, now, !s.unlocked),
     album: [entry, ...s.album],
     coins: s.coins + (ending === "marry" ? WEDDING_GIFT : 0),
     overlays: [...s.overlays, { kind: "ending", ending, entry }],
@@ -114,6 +135,12 @@ export const useGame = create<GameState>()(
       today: { day: dayKey(Date.now()), reps: 0 },
       outings: { day: dayKey(Date.now()), n: 0 },
       seenHelp: false,
+      unlocked: false,
+      paywallShown: false,
+      stepsAsked: false,
+      stepsFrom: null,
+      stepsClaimed: {},
+      firstMeal: false,
       mode: "home",
       overlays: [],
       speech: null,
@@ -139,7 +166,7 @@ export const useGame = create<GameState>()(
         if (!f || isEgg(s.pet)) return "full";
         if (!canEat(s.pet, f)) return "full";
         if (s.coins < f.price) return "poor";
-        set({ pet: eat(s.pet, f), coins: s.coins - f.price });
+        set({ pet: eat(s.pet, f), coins: s.coins - f.price, firstMeal: true });
         return "ok";
       },
 
@@ -176,14 +203,65 @@ export const useGame = create<GameState>()(
         const day = dayKey(now);
         const today = s.today.day === day ? { day, reps: s.today.reps + n } : { day, reps: n };
         const overlays = [...s.overlays];
+        if (r.cameBack) overlays.push({ kind: "back" });
         if (r.grew) overlays.push({ kind: "grew", stage: r.grew });
-        set({ pet: r.pet, today, overlays, coins: s.coins + REP_COINS * n });
+        const crossed = !s.paywallShown && r.pet.locked && r.pet.reps >= FREE_REPS_LIMIT;
+        if (crossed) overlays.push({ kind: "paywall" });
+        set({ pet: r.pet, today, overlays, coins: s.coins + REP_COINS * n, paywallShown: s.paywallShown || !!crossed });
+      },
+
+      answerSteps: (allowed) =>
+        set({ stepsAsked: true, stepsFrom: allowed ? dayKey(Date.now()) : get().stepsFrom }),
+
+      receiveSteps: (totals) => {
+        get().sync();
+        const s = get();
+        if (!s.stepsFrom || isEgg(s.pet)) return;
+        const r = claimSteps(s.stepsClaimed, totals);
+        if (r.units <= 0) return;
+        const now = Date.now();
+        const g = addReps(s.pet, r.units, now);
+        const overlays: Overlay[] = [...s.overlays, { kind: "delivery", units: r.units }];
+        if (g.cameBack) overlays.push({ kind: "back" });
+        if (g.grew) overlays.push({ kind: "grew", stage: g.grew });
+        const crossed = !s.paywallShown && g.pet.locked && g.pet.reps >= FREE_REPS_LIMIT;
+        if (crossed) overlays.push({ kind: "paywall" });
+        // 2週間より 前の 記録は 要らないので 捨てる
+        const keep = new Set(Array.from({ length: 14 }, (_, i) => dayKey(now - i * 86_400_000)));
+        const stepsClaimed = Object.fromEntries(Object.entries(r.claimed).filter(([d]) => keep.has(d)));
+        set({ pet: g.pet, coins: s.coins + REP_COINS * r.units, stepsClaimed, overlays, paywallShown: s.paywallShown || !!crossed });
+      },
+
+      showPaywall: () => {
+        const s = get();
+        if (s.overlays.some((o) => o.kind === "paywall")) return;
+        set({ overlays: [...s.overlays, { kind: "paywall" }], paywallShown: true });
+      },
+
+      unlock: () => {
+        const s = get();
+        const before = stageOf(s.pet);
+        const pet: Pet = { ...s.pet, locked: false };
+        const after = stageOf(pet);
+        if (after.id === "adult" && pet.adultAt == null) pet.adultAt = Date.now();
+        const overlays = s.overlays.filter((o) => o.kind !== "paywall");
+        if (after.id !== before.id) overlays.push({ kind: "grew", stage: after });
+        set({ unlocked: true, pet, overlays });
+      },
+
+      // 試作の ブラウザ版だけで つかう。時間を すすめる
+      devAdvance: (hours) => {
+        const s = get();
+        const ms = hours * 3_600_000;
+        set({ pet: { ...s.pet, lastTick: s.pet.lastTick - ms, bornAt: s.pet.bornAt - ms, adultAt: s.pet.adultAt ? s.pet.adultAt - ms : s.pet.adultAt, zeroSince: s.pet.zeroSince ? s.pet.zeroSince - ms : s.pet.zeroSince, away: s.pet.away ? { ...s.pet.away, since: s.pet.away.since - ms } : s.pet.away } });
+        get().sync();
       },
 
       goOuting: (id) => {
         get().sync();
         const s = get();
         const place = PLACES.find((p) => p.id === id)!;
+        if (s.pet.away) return "closed";
         if (!placeOpen(s.pet, place)) return "closed";
         if (outingsLeft(s) <= 0) return "tired";
         if (s.coins < place.price) return "poor";
@@ -219,6 +297,11 @@ export const useGame = create<GameState>()(
       closeOverlay: () => {
         const s = get();
         const closed = s.overlays[0];
+        // なまえを つけたら 歩数の 案内
+        if (closed?.kind === "name" && !s.stepsAsked) {
+          set({ overlays: [{ kind: "askSteps" }, ...s.overlays.slice(1)] });
+          return;
+        }
         // エンディングを とじた ときから 次の たまごの 10秒を かぞえる
         const pet = closed?.kind === "ending" && isEgg(s.pet) ? restartEgg(s.pet) : s.pet;
         set({ overlays: s.overlays.slice(1), pet });
@@ -229,7 +312,12 @@ export const useGame = create<GameState>()(
       markHelpSeen: () => set({ seenHelp: true, pet: isEgg(get().pet) ? restartEgg(get().pet) : get().pet }),
       resetAll: () =>
         set({
-          pet: newPet(1, Date.now()),
+          pet: newPet(1, Date.now(), !get().unlocked),
+          stepsAsked: false,
+          stepsFrom: null,
+          stepsClaimed: {},
+          paywallShown: false,
+          firstMeal: false,
           coins: START_COINS,
           owned: [],
           playBest: 0,
@@ -244,7 +332,7 @@ export const useGame = create<GameState>()(
     }),
     {
       name: "mini-piyofit-v1",
-      version: 3,
+      version: 4,
       partialize: (s) => ({
         pet: s.pet,
         coins: s.coins,
@@ -255,6 +343,12 @@ export const useGame = create<GameState>()(
         today: s.today,
         outings: s.outings,
         seenHelp: s.seenHelp,
+        unlocked: s.unlocked,
+        paywallShown: s.paywallShown,
+        stepsAsked: s.stepsAsked,
+        stepsFrom: s.stepsFrom,
+        stepsClaimed: s.stepsClaimed,
+        firstMeal: s.firstMeal,
       }),
       // v1（コインなし版）を あそんでいた人には はじめの コインを わたす
       migrate: (old, version) => {
@@ -267,6 +361,10 @@ export const useGame = create<GameState>()(
         if (version < 3 && next.pet) {
           const pet = next.pet as Pet;
           next = { ...next, pet: { ...pet, hatchedAt: pet.reps >= 10 ? pet.bornAt : null } };
+        }
+        // v4: いえでで 消えなくなった。課金の 入り口を 追加
+        if (version < 4 && next.pet) {
+          next = { ...next, pet: { ...(next.pet as Pet), locked: true, away: null }, unlocked: false };
         }
         return next;
       },

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGame, todayReps } from "../game/store";
-import { HATCH_AFTER_MS, hearts, nextStageOf, stageFor, stageOf } from "../game/rules";
+import { COMEBACK_REPS, growthReps, HATCH_AFTER_MS, hearts, isAtPaywall, nextStageOf, stageFor, stageOf } from "../game/rules";
+import { FOODS, REP_COINS } from "../game/economy";
 import { idleLine } from "../game/lines";
 import { IconHand, IconHeart, IconSparkle } from "./icons";
 import { PetFigure } from "./PetFigure";
@@ -37,6 +38,8 @@ export function Room({ onPat }: { onPat: () => void }) {
   const pet = useGame((s) => s.pet);
   const speech = useGame((s) => s.speech);
   const today = useGame(todayReps);
+  const coins = useGame((s) => s.coins);
+  const showPaywall = useGame((s) => s.showPaywall);
   const stage = stageOf(pet);
   const next = nextStageOf(pet);
   const [floaters, setFloaters] = useState<{ id: number; x: number; dx: number; delay: number; kind: "heart" | "sparkle" }[]>([]);
@@ -63,20 +66,25 @@ export function Room({ onPat }: { onPat: () => void }) {
 
   const isEgg = stage.id === "egg";
   const weak = !isEgg && (pet.hunger < 10 || pet.mood < 10);
-  const prevFloor = next ? stageFor(pet.reps).at : 0;
+  const grown = growthReps(pet);
+  const prevFloor = next ? stageFor(grown).at : 0;
+  const mealPrice = FOODS[0].price;
+  const needMeal = !isEgg && !pet.away && coins < mealPrice;
+  const paywall = !isEgg && isAtPaywall(pet);
   // たまごの あいだは かえるまでの 時間で バーを すすめる
   const progress = isEgg
     ? Math.min(1, Math.max(0, (pet.lastTick - pet.bornAt) / HATCH_AFTER_MS))
     : next
-      ? (pet.reps - prevFloor) / (next.at - prevFloor)
+      ? (grown - prevFloor) / (next.at - prevFloor)
       : 1;
+  const barValue = pet.away ? pet.away.reps / COMEBACK_REPS : needMeal ? coins / mealPrice : progress;
 
   // 部屋の なかを あるきまわる。たまご・げんきが ない とき・動きを へらす 設定 では まんなかに いる
   const petRef = useRef<HTMLButtonElement>(null);
   const [walk, setWalk] = useState({ x: 50, ms: 0, walking: false, facing: 1 });
   const xRef = useRef(50);
   const pauseUntil = useRef(0);
-  const still = isEgg || weak || REDUCED_MOTION;
+  const still = isEgg || weak || !!pet.away || REDUCED_MOTION;
   useEffect(() => {
     if (still) {
       xRef.current = 50;
@@ -132,6 +140,12 @@ export function Room({ onPat }: { onPat: () => void }) {
   return (
     <div className="room">
       <div className="stage-area">
+        {pet.away ? (
+          <div className="away-note" role="img" aria-label="さがさないでね の 手紙">
+            <div className="letter" aria-hidden="true"><span>むかえに きてね</span></div>
+          </div>
+        ) : (
+        <>
         <p className="bubble" key={line}>
           {line}
         </p>
@@ -143,7 +157,7 @@ export function Room({ onPat }: { onPat: () => void }) {
         <button
           ref={petRef}
           type="button"
-          className={`pet${weak ? " is-weak" : ""}${isEgg ? " is-egg" : ""}`}
+          className={`pet${weak ? " is-weak" : ""}${isEgg ? " is-egg" : ""}${!isEgg && (pet.hunger <= 0 || pet.mood <= 0) ? " is-waiting" : ""}`}
           onPointerDown={tap}
           aria-label={isEgg ? "たまごを なでる" : "なでる"}
           style={{ left: `${walk.x}%`, transitionDuration: `${walk.ms}ms` }}
@@ -168,23 +182,33 @@ export function Room({ onPat }: { onPat: () => void }) {
             <IconHand size={16} /> タップで なでる
           </p>
         )}
+        </>
+        )}
       </div>
 
       <div className="growth">
-        {!isEgg && (
+        {!isEgg && !pet.away && (
           <div className="meters">
             <Hearts label="おなか" value={pet.hunger} />
             <Hearts label="きげん" value={pet.mood} />
           </div>
         )}
         <div className="growth-row">
-          <span className="growth-label">{isEgg ? "もうすぐ うまれる" : next ? `つぎは ${next.label}` : "ひとりだち まで もうすこし"}</span>
-          <span className="growth-left">{isEgg ? "" : next ? `うんどう あと ${next.at - pet.reps}かい` : ""}</span>
+          <span className="growth-label">
+            {isEgg ? "もうすぐ うまれる" : pet.away ? "おでかけ中。むかえに いこう" : needMeal ? "ごはん代まで" : paywall ? `つぎは ${next?.label ?? ""}` : next ? `つぎは ${next.label}` : "ひとりだち まで もうすこし"}
+          </span>
+          <span className="growth-left">
+            {isEgg ? "" : pet.away ? `あと ${COMEBACK_REPS - pet.away.reps}かい` : needMeal ? `あと ${Math.ceil((mealPrice - coins) / REP_COINS)}かい` : paywall ? "" : next ? `あと ${next.at - grown}かい` : ""}
+          </span>
         </div>
-        <div className="growth-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
-          <span style={{ width: progress > 0 ? `${Math.max(3, progress * 100)}%` : "0%" }} />
+        <div className="growth-bar" role="progressbar" aria-valuenow={Math.round(barValue * 100)} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: barValue > 0 ? `${Math.max(3, barValue * 100)}%` : "0%" }} />
         </div>
-        <p className="growth-today">きょう {today}かい</p>
+        {paywall && !pet.away ? (
+          <button type="button" className="pill mini" onClick={showPaywall}>つづきを そだてる</button>
+        ) : (
+          <p className="growth-today">きょう {today}かい</p>
+        )}
       </div>
     </div>
   );

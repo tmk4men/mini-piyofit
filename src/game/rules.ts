@@ -3,15 +3,22 @@
 export const HOUR = 3600_000;
 
 /** おなか 100→0 にかかる時間 */
-export const HUNGER_EMPTY_H = 16;
+export const HUNGER_EMPTY_H = 48;
 /** きげん 100→0 にかかる時間（うんちがあると 1個ごとに 1.5倍速くなる） */
-export const MOOD_EMPTY_H = 24;
-export const POOP_EVERY_H = 4;
+export const MOOD_EMPTY_H = 120;
+export const POOP_EVERY_H = 8;
 export const POOP_MAX = 3;
-/** おなか か きげん が 0 になったら すぐ いえで（待ち時間なし） */
-export const RUNAWAY_AFTER_H = 0;
+/** おなか か きげん が 0 のまま これだけ たつと、おでかけして 手紙を のこす（いなくなりは しない） */
+export const AWAY_AFTER_H = 48;
+/** うんどう（または 歩数）これだけで むかえに いける */
+export const COMEBACK_REPS = 5;
 /** おとなになってから（けっこん しなければ）ひとりだちするまで */
-export const LEAVE_AFTER_H = 72;
+export const LEAVE_AFTER_H = 168;
+/** 無料で そだつのは ここの 手前まで。回数は ためたまま */
+export const FREE_REPS_LIMIT = 100;
+/** 1000歩で 1かいぶん。1日 10かいぶんまで */
+export const STEPS_PER_UNIT = 1000;
+export const MAX_STEP_UNITS_PER_DAY = 10;
 
 export const FEED_HUNGER = 30;
 export const FULL_AT = 90;
@@ -53,15 +60,23 @@ export function nextStage(reps: number): Stage | null {
   return STAGES.find((s) => s.at > reps) ?? null;
 }
 
+/** そだちに つかう 回数。買う前は 無料の 手前で 止まる（本当の 回数は のこる） */
+export const growthReps = (pet: Pick<Pet, "reps" | "locked">) =>
+  pet.locked ? Math.min(pet.reps, FREE_REPS_LIMIT - 1) : pet.reps;
+
+/** つづきを 買えば 先に すすめる 状態 */
+export const isAtPaywall = (pet: Pick<Pet, "reps" | "locked" | "hatchedAt">) =>
+  !!pet.locked && pet.hatchedAt != null && pet.reps >= FREE_REPS_LIMIT - 1;
+
 export const isEgg = (pet: Pet) => pet.hatchedAt == null;
 
 /** いまの 段階（たまごの あいだは たまご） */
 export function stageOf(pet: Pet): Stage {
-  return isEgg(pet) ? EGG : stageFor(pet.reps);
+  return isEgg(pet) ? EGG : stageFor(growthReps(pet));
 }
 
 export function nextStageOf(pet: Pet): Stage | null {
-  return isEgg(pet) ? STAGES[0] : nextStage(pet.reps);
+  return isEgg(pet) ? STAGES[0] : nextStage(growthReps(pet));
 }
 
 export interface Pet {
@@ -84,19 +99,25 @@ export interface Pet {
   lastTick: number;
   /** おとなに なってから であった あいて */
   partner?: { name: string; bond: number } | null;
+  /** 買う前は true。そだちが 無料の 手前で 止まる */
+  locked?: boolean;
+  /** おでかけ中。reps は むかえに いく ぶんの 回数 */
+  away?: { since: number; reps: number } | null;
 }
 
 export type Ending = "leave" | "runaway" | "marry";
 
-export function newPet(gen: number, now: number): Pet {
+export function newPet(gen: number, now: number, locked = true): Pet {
   return {
     gen,
     name: "",
     bornAt: now,
     hatchedAt: null,
     reps: 0,
-    hunger: 80,
+    hunger: 70,
     mood: 80,
+    locked,
+    away: null,
     poops: 0,
     poopClock: 0,
     zeroSince: null,
@@ -133,8 +154,10 @@ export function tick(pet: Pet, now: number): { pet: Pet; ending: Ending | null; 
     const dt = Math.min(STEP, now - t);
     t += dt;
     const h = dt / HOUR;
+    // おでかけ中は おなかも きげんも 減らない
+    if (p.away) continue;
     p.hunger = clamp(p.hunger - (100 / HUNGER_EMPTY_H) * h);
-    p.mood = clamp(p.mood - (100 / MOOD_EMPTY_H) * h * (1 + 0.5 * p.poops));
+    p.mood = clamp(p.mood - (100 / MOOD_EMPTY_H) * h * (1 + 0.25 * p.poops));
     p.poopClock += dt;
     while (p.poopClock >= POOP_EVERY_H * HOUR) {
       p.poopClock -= POOP_EVERY_H * HOUR;
@@ -143,9 +166,10 @@ export function tick(pet: Pet, now: number): { pet: Pet; ending: Ending | null; 
     const zero = p.hunger <= 0 || p.mood <= 0;
     if (zero && p.zeroSince == null) p.zeroSince = t;
     if (!zero) p.zeroSince = null;
-    if (p.zeroSince != null && t - p.zeroSince >= RUNAWAY_AFTER_H * HOUR) {
-      p.lastTick = t;
-      return { pet: p, ending: "runaway", hatched };
+    if (p.zeroSince != null && t - p.zeroSince >= AWAY_AFTER_H * HOUR) {
+      p.away = { since: t, reps: 0 };
+      p.zeroSince = null;
+      continue;
     }
     if (p.adultAt != null && t - p.adultAt >= LEAVE_AFTER_H * HOUR) {
       p.lastTick = t;
@@ -172,9 +196,18 @@ export function clean(pet: Pet): Pet {
 }
 
 /** n 回ぶん運動した。段階が上がったら新しい段階を返す */
-export function addReps(pet: Pet, n: number, now: number): { pet: Pet; grew: Stage | null } {
+export function addReps(pet: Pet, n: number, now: number): { pet: Pet; grew: Stage | null; cameBack?: boolean } {
   const before = stageOf(pet);
   const reps = pet.reps + n;
+  if (pet.away) {
+    const got = pet.away.reps + n;
+    if (got < COMEBACK_REPS) return { pet: { ...pet, reps, away: { ...pet.away, reps: got } }, grew: null };
+    // むかえに きてくれたので かえってくる。そだちは そのまま
+    const home: Pet = { ...pet, reps, away: null, hunger: Math.max(pet.hunger, 60), mood: Math.max(pet.mood, 60), poops: 0, poopClock: 0, zeroSince: null };
+    const after = stageOf(home);
+    if (after.id === "adult" && home.adultAt == null) home.adultAt = now;
+    return { pet: home, grew: after.id !== before.id ? after : null, cameBack: true };
+  }
   const after = stageOf({ ...pet, reps });
   // うんどうで おなかは へるが、うんどうで いえで させない（1 より下げない）
   const hunger = Math.max(Math.min(pet.hunger, 1), clamp(pet.hunger - REP_HUNGER * n));
@@ -197,4 +230,22 @@ export function hearts(v: number): number {
 
 export function ageDays(pet: Pet, now: number): number {
   return Math.floor((now - pet.bornAt) / (24 * HOUR)) + 1;
+}
+
+/** その日の 歩数から、まだ 受け取っていない 1000歩ぶんを 数える。同じ 歩数は 二度 もらえない */
+export function claimSteps(
+  claimed: Record<string, number>,
+  totals: { day: string; steps: number }[],
+): { units: number; claimed: Record<string, number> } {
+  const next = { ...claimed };
+  let units = 0;
+  for (const { day, steps } of totals) {
+    const have = Math.min(MAX_STEP_UNITS_PER_DAY, Math.floor(Math.max(0, steps) / STEPS_PER_UNIT));
+    const gain = have - (next[day] ?? 0);
+    if (gain > 0) {
+      units += gain;
+      next[day] = have;
+    }
+  }
+  return { units, claimed: next };
 }

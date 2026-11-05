@@ -55,3 +55,4 @@ verify/assets-sheet.png
 android/
 ios/
 verify/.bust-profile/
+verify/out

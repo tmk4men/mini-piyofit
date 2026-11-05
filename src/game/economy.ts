@@ -5,7 +5,7 @@ import { stageOf, type Pet } from "./rules";
 /** うんどう 1回で もらえる コイン */
 export const REP_COINS = 10;
 /** はじめて あそぶ ときの コイン */
-export const START_COINS = 200;
+export const START_COINS = 0;
 /** けっこんの おいわい */
 export const WEDDING_GIFT = 300;
 /** おでかけは 1日 この回数まで */
@@ -25,9 +25,9 @@ export interface Food {
 }
 
 export const FOODS: Food[] = [
-  { id: "onigiri", name: "おにぎり", price: 30, hunger: 30, mood: 0 },
-  { id: "bento", name: "おべんとう", price: 70, hunger: 60, mood: 10 },
-  { id: "cake", name: "ケーキ", price: 60, hunger: 10, mood: 30 },
+  { id: "onigiri", name: "おにぎり", price: 50, hunger: 40, mood: 15 },
+  { id: "bento", name: "おべんとう", price: 100, hunger: 70, mood: 10 },
+  { id: "cake", name: "ケーキ", price: 80, hunger: 10, mood: 30 },
 ];
 
 export type OutfitId = "ribbon" | "cap" | "scarf";
