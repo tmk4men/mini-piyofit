@@ -53,6 +53,5 @@ verify/assets-sheet.png
 
 # ネイティブ化は未着手（元のぴよふぃっとの設定のまま）
 android/
-ios/
 verify/.bust-profile/
 verify/out

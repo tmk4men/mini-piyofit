@@ -1,0 +1,20 @@
+{
+  "identifier" : "PIYO0001",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "1500",
+      "familyShareable" : false,
+      "internalID" : "6790000001",
+      "localizations" : [
+        { "description" : "おとなまでの成長、けっこん、次の世代", "displayName" : "つづきを そだてる", "locale" : "ja_JP" }
+      ],
+      "productID" : "app.piyogohan.unlock",
+      "referenceName" : "unlock",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : { "_applicationInternalID" : "0", "_compatibilityTimeRate" : { "3" : 6 }, "_storeKitErrors" : [] },
+  "subscriptionGroups" : [],
+  "version" : { "major" : 4, "minor" : 0 }
+}
