@@ -5,6 +5,8 @@ execSync("npx esbuild src/game/rules.ts --format=esm --outfile=verify/out/rules.
 execSync("npx esbuild src/game/memory.ts --format=esm --outfile=verify/out/memory.mjs --log-level=error");
 const R = await import("./out/rules.mjs?" + Date.now());
 const M = await import("./out/memory.mjs?" + Date.now());
+execSync("npx esbuild src/game/scene.ts --bundle --format=esm --outfile=verify/out/scene.mjs --log-level=error");
+const Z = await import("./out/scene.mjs?" + Date.now());
 const H = R.HOUR;
 let ok = 0, ng = 0;
 const t = (n, f) => { try { f(); ok++; } catch (e) { ng++; console.log("NG", n, e.message); } };
@@ -28,6 +30,13 @@ t("歩数が減っても（訂正）返さない・負でも落ちない", () =>
 t("歩くだけで100回は届く（6000歩なら17日）", () => { assert.equal(Math.ceil(100 / 6), 17); });
 t("おとなは時間ではいなくならない（1年世話しても）", () => { let p = hatched({ locked: false, reps: 400, adultAt: 0 }); for (let i = 1; i <= 365; i++) { const r = R.tick(p, i * 24 * H); assert.equal(r.ending, null); p = { ...r.pet, hunger: 100, mood: 100, poops: 0 }; } assert.equal(R.stageOf(p).id, "adult"); });
 t("おとなを1年放っても消えない", () => { const r = R.tick(hatched({ locked: false, reps: 400, adultAt: 0 }), 8760 * H); assert.equal(r.ending, null); assert.ok(r.pet.away); assert.equal(r.pet.reps, 400); });
+t("たまご・おでかけ・待っている時は場面を出さない", () => { assert.equal(Z.pickScene(R.newPet(1, 0), 12, null, 0.5), null); assert.equal(Z.pickScene(hatched({ away: { since: 0, reps: 0 } }), 12, null, 0.5), null); assert.equal(Z.pickScene(hatched({ hunger: 0 }), 12, null, 0.5), null); });
+t("同じ場面を続けない（全ての乱数で）", () => { for (const last of Object.keys(Z.SCENES)) for (let r = 0; r < 1; r += 0.02) assert.notEqual(Z.pickScene(hatched(), 12, last, r), last); });
+t("大人に昼寝の絵は出さない（絵が無い）", () => { for (let r = 0; r < 1; r += 0.02) assert.notEqual(Z.pickScene(hatched({ locked: false, reps: 400 }), 2, null, r), "nap"); });
+t("夜のひよこは寝ている", () => assert.equal(Z.pickScene(hatched(), 2, null, 0.5), "nap"));
+t("うんちがあれば見つめる", () => assert.equal(Z.pickScene(hatched({ poops: 2 }), 12, null, 0.5), "poop"));
+t("乱数の端でも場面を返す", () => { assert.ok(Z.pickScene(hatched(), 12, null, 0)); assert.ok(Z.pickScene(hatched(), 12, null, 0.999999)); });
+t("全部の場面が一言を持つ・12字前後", () => { for (const s of Object.values(Z.SCENES)) { assert.ok(s.line.length <= 12, s.line); assert.ok(s.woke.length <= 12, s.woke); } });
 const NOW = new Date(2026, 10, 10, 20, 0).getTime(); const D = 24 * H; const dk = (i) => { const d = new Date(NOW - i * D); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
 const hist = (o) => Object.fromEntries(Object.entries(o).map(([i, v]) => [dk(+i), { reps: 0, units: 0, ...v }]));
 t("記録がなければ何も言わない（作り話をしない）", () => assert.equal(M.memoryLine({}, NOW), null));

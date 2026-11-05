@@ -813,3 +813,19 @@ button:disabled { cursor: default; }
 @keyframes eat-food { 0% { transform: translate(-50%, -46px) scale(1); opacity: 1; } 55% { transform: translate(-50%, 22px) scale(1); opacity: 1; } 75% { transform: translate(-50%, 26px) scale(.62) rotate(-8deg); opacity: 1; } 100% { transform: translate(-50%, 30px) scale(.2); opacity: 0; } }
 .card-meal .pill { min-width: 180px; }
 .reset .text-btn { display: block; margin: 4px auto 0; }
+
+/* ひらいた瞬間の 場面 */
+.scene-prop { position: absolute; bottom: 9%; width: 34%; transform: translateX(-50%); pointer-events: none; z-index: 1; }
+.scene-prop.is-box { width: 42%; bottom: 8%; z-index: 3; }
+.scene-prop.is-chair { width: 38%; }
+.scene-prop.is-toilet { width: 38%; }
+.pet.scene-window { bottom: 44%; }
+.pet.scene-window .pet-img { width: 62%; margin: 0 auto; }
+.pet.scene-squat .pet-img { animation: scene-squat 1.5s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes scene-squat { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.1, .78); } }
+.pet.scene-chair .pet-img { animation: scene-jump 1.3s ease-out infinite; }
+@keyframes scene-jump { 0%, 55%, 100% { transform: translateY(0); } 72% { transform: translateY(-20px); } }
+.pet.scene-box .pet-img { animation: scene-peek 2.4s ease-in-out infinite; }
+@keyframes scene-peek { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(4deg); } }
+.pet.scene-toilet .pet-img { animation: scene-peek 1.7s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .pet[class*="scene-"] .pet-img { animation: none; } }

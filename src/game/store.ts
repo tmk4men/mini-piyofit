@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { pickScene, type SceneId } from "./scene";
 import { dayLog, memoryLine, pruneHistory, type History } from "./memory";
 import { addReps, claimSteps, clean, FREE_REPS_LIMIT, newPet, pat, isEgg, STAGES, stageOf, tick, type Ending, type Pet, type Stage } from "./rules";
 import {
@@ -71,7 +72,11 @@ interface GameState {
   history: History;
   /** きょうの ひとこと */
   memo: { day: string; text: string } | null;
+  /** 前に 見せた 場面と、前に ひらいた 時刻 */
+  lastScene: SceneId | null;
+  lastOpenAt: number;
   /** 保存しない一時状態 */
+  scene: SceneId | null;
   mealOffer: boolean;
   offerMuted: boolean;
   eating: { id: string; at: number } | null;
@@ -95,6 +100,8 @@ interface GameState {
   say: (text: string) => void;
   markHelpSeen: () => void;
   openDay: (now?: number) => void;
+  openScene: (now?: number) => void;
+  endScene: () => void;
   acceptMeal: () => void;
   declineMeal: () => void;
   graduate: () => void;
@@ -159,6 +166,9 @@ export const useGame = create<GameState>()(
       firstMeal: false,
       history: {},
       memo: null,
+      lastScene: null,
+      lastOpenAt: 0,
+      scene: null,
       mealOffer: false,
       offerMuted: false,
       eating: null,
@@ -248,6 +258,20 @@ export const useGame = create<GameState>()(
         set({ mealOffer: false, mode: r === "ok" ? "home" : s.mode, speech: r === "ok" ? { text: "もぐもぐ…おいしい！", at: Date.now() } : s.speech });
       },
       declineMeal: () => set({ mealOffer: false, offerMuted: true }),
+
+      // 30分 以上 あいて ひらいたら、この子は もう 何かを している
+      openScene: (now = Date.now()) => {
+        get().sync(now);
+        const s = get();
+        const gap = now - s.lastOpenAt;
+        if (gap < 30 * 60_000) {
+          set({ lastOpenAt: now });
+          return;
+        }
+        const scene = s.mode === "home" ? pickScene(s.pet, new Date(now).getHours(), s.lastScene, Math.random()) : null;
+        set({ lastOpenAt: now, scene, lastScene: scene ?? s.lastScene });
+      },
+      endScene: () => set({ scene: null }),
 
       // その日 はじめて ひらいた ときだけ 覚えていることを 言う
       openDay: (now = Date.now()) => {
@@ -347,6 +371,8 @@ export const useGame = create<GameState>()(
           stepsClaimed: shift(s.stepsClaimed),
         });
         get().sync();
+        useGame.setState({ lastOpenAt: 0 });
+        get().openScene();
         get().openDay();
       },
 
@@ -399,7 +425,7 @@ export const useGame = create<GameState>()(
         const pet = closed?.kind === "ending" && isEgg(s.pet) ? restartEgg(s.pet) : s.pet;
         set({ overlays: s.overlays.slice(1), pet });
       },
-      setMode: (mode) => set(mode === "exercise" ? { mode, offerMuted: false } : { mode }),
+      setMode: (mode) => set(mode === "exercise" ? { mode, offerMuted: false, scene: null } : mode === "home" ? { mode } : { mode, scene: null }),
       say: (text) => set({ speech: { text, at: Date.now() } }),
       // はじめての 遊び方を とじた ときから たまごの 10秒を かぞえる
       markHelpSeen: () => set({ seenHelp: true, pet: isEgg(get().pet) ? restartEgg(get().pet) : get().pet }),
@@ -413,6 +439,9 @@ export const useGame = create<GameState>()(
           firstMeal: false,
           history: {},
           memo: null,
+          lastScene: null,
+          lastOpenAt: 0,
+          scene: null,
           mealOffer: false,
           offerMuted: false,
           coins: START_COINS,
@@ -448,6 +477,8 @@ export const useGame = create<GameState>()(
         firstMeal: s.firstMeal,
         history: s.history,
         memo: s.memo,
+        lastScene: s.lastScene,
+        lastOpenAt: s.lastOpenAt,
       }),
       // v1（コインなし版）を あそんでいた人には はじめの コインを わたす
       migrate: (old, version) => {

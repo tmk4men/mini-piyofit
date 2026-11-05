@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useGame, todayReps } from "../game/store";
 import { COMEBACK_REPS, growthReps, HATCH_AFTER_MS, hearts, isAtPaywall, nextStageOf, stageFor, stageOf } from "../game/rules";
 import { FOODS, REP_COINS } from "../game/economy";
+import { SCENES } from "../game/scene";
+import { playPetSfx } from "../sfx/sfx";
 import { idleLine } from "../game/lines";
 import { IconBento, IconCake, IconHand, IconHeart, IconOnigiri, IconSparkle } from "./icons";
 import { PetFigure } from "./PetFigure";
@@ -42,6 +44,10 @@ export function Room({ onPat }: { onPat: () => void }) {
   const memo = useGame((s) => s.memo);
   const eating = useGame((s) => s.eating);
   const blockedByCard = useGame((s) => s.overlays.length > 0 || s.mealOffer);
+  const sceneId = useGame((s) => s.scene);
+  const scene = sceneId ? SCENES[sceneId] : null;
+  const endScene = useGame((s) => s.endScene);
+  const say = useGame((s) => s.say);
   const showPaywall = useGame((s) => s.showPaywall);
   const stage = stageOf(pet);
   const next = nextStageOf(pet);
@@ -69,13 +75,20 @@ export function Room({ onPat }: { onPat: () => void }) {
   const [memoUntil, setMemoUntil] = useState(0);
   const memoShown = useRef<string | null>(null);
   useEffect(() => {
-    if (!memo || blockedByCard || memoShown.current === memo.day) return;
-    memoShown.current = memo.day;
+    if (!memo || blockedByCard || scene || memoShown.current === memo.day + memo.text) return;
+    memoShown.current = memo.day + memo.text;
     setMemoUntil(Date.now() + 25000);
     const t = setTimeout(() => setMemoUntil(0), 25000);
     return () => clearTimeout(t);
-  }, [memo, blockedByCard]);
-  const line = fresh ? speech!.text : memo && memoUntil > Date.now() ? memo.text : idle;
+  }, [memo, blockedByCard, scene]);
+  const line = fresh ? speech!.text : scene ? scene.line : memo && memoUntil > Date.now() ? memo.text : idle;
+
+  // 場面は 気づかなければ 14秒で ふだんに もどる。カードが 出ている間は 数えない
+  useEffect(() => {
+    if (!scene || blockedByCard) return;
+    const t = setTimeout(endScene, 14000);
+    return () => clearTimeout(t);
+  }, [scene, blockedByCard, endScene]);
 
   // ごはんを たべる ところを 見せる
   const [meal, setMeal] = useState<string | null>(null);
@@ -107,11 +120,12 @@ export function Room({ onPat }: { onPat: () => void }) {
   const [walk, setWalk] = useState({ x: 50, ms: 0, walking: false, facing: 1 });
   const xRef = useRef(50);
   const pauseUntil = useRef(0);
-  const still = isEgg || weak || !!pet.away || REDUCED_MOTION;
+  const still = isEgg || weak || !!pet.away || !!scene || REDUCED_MOTION;
   useEffect(() => {
     if (still) {
-      xRef.current = 50;
-      setWalk({ x: 50, ms: 600, walking: false, facing: 1 });
+      const home = scene?.x ?? 50;
+      xRef.current = home;
+      setWalk({ x: home, ms: scene ? 0 : 600, walking: false, facing: 1 });
       return;
     }
     let t: ReturnType<typeof setTimeout>;
@@ -133,9 +147,17 @@ export function Room({ onPat }: { onPat: () => void }) {
     };
     t = setTimeout(next, 1500);
     return () => clearTimeout(t);
-  }, [still]);
+  }, [still, scene]);
 
   const tap = (e: React.PointerEvent) => {
+    if (scene) {
+      // なでて 気づく。この時は 反応の 一言だけに する
+      endScene();
+      say(scene.woke);
+      playPetSfx();
+      setBump((b) => b + 1);
+      return;
+    }
     const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const id = ++idRef.current;
     // よろこびの ハートを 3つと きらきらを 1つ、はじけるように だす
@@ -173,6 +195,10 @@ export function Room({ onPat }: { onPat: () => void }) {
           {line}
         </p>
 
+        {scene?.prop && (
+          <img className={`scene-prop is-${scene.id}`} src={asset(scene.prop.img)} alt="" style={{ left: `${scene.prop.x}%` }} draggable={false} />
+        )}
+
         {POOP_SPOTS.slice(0, pet.poops).map((p, i) => (
           <img key={`poop${i}`} className="poop" src={asset("piyo_poop.webp")} alt="うんち" style={p} />
         ))}
@@ -180,14 +206,14 @@ export function Room({ onPat }: { onPat: () => void }) {
         <button
           ref={petRef}
           type="button"
-          className={`pet${weak ? " is-weak" : ""}${isEgg ? " is-egg" : ""}${!isEgg && (pet.hunger <= 0 || pet.mood <= 0) ? " is-waiting" : ""}`}
+          className={`pet${weak ? " is-weak" : ""}${isEgg ? " is-egg" : ""}${!isEgg && (pet.hunger <= 0 || pet.mood <= 0) ? " is-waiting" : ""}${scene ? ` scene-${scene.id}` : ""}`}
           onPointerDown={tap}
           aria-label={isEgg ? "たまごを なでる" : "なでる"}
           style={{ left: `${walk.x}%`, transitionDuration: `${walk.ms}ms` }}
         >
           <span className={`pet-face${walk.facing < 0 ? " is-left" : ""}`}>
             <span key={`sway${bump}`} className={`pet-sway${bump > 0 ? " is-swaying" : ""}`}>
-              <PetFigure className={`pet-img${walk.walking ? " is-walking" : ""}`} />
+              <PetFigure className={`pet-img${walk.walking ? " is-walking" : ""}`} asleep={sceneId === "nap"} />
             </span>
           </span>
           {meal && (
@@ -205,7 +231,7 @@ export function Room({ onPat }: { onPat: () => void }) {
             </span>
           ))}
         </button>
-        {pet.reps === 0 && !isEgg && (
+        {(pet.reps === 0 || scene) && !isEgg && (
           <p className="tap-hint">
             <IconHand size={16} /> タップで なでる
           </p>

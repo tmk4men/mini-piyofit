@@ -23,6 +23,7 @@ export function hungryAt(hunger: number, now: number): number {
 
 export async function onOpen(): Promise<void> {
   const g = useGame.getState;
+  g().openScene();
   // きのうの 歩数を 受け取ってから 覚えていることを 言う
   if (!isNative()) {
     g().openDay();

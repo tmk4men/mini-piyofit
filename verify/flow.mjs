@@ -31,12 +31,17 @@ async function run(type, name, vp) {
   await p.waitForTimeout(1200); chk(`${name} たべ終わると 消える`, (await p.locator(".eat-food").count()) === 0);
   await menu("試作: 6000ほ あるいた"); await click("うけとる"); await p.waitForTimeout(200);
   chk(`${name} 満腹の時は ごはんを 聞かない`, (await p.getByText("おにぎりが 買えるよ").count()) === 0);
-  await menu("試作: 1にち すすめる");
+  await menu("試作: 1にち すすめる"); await p.waitForTimeout(300);
+  chk(`${name} ひらくと もう 何かを している`, await p.locator('.pet[class*="scene-"]').count()); await shot("06a_scene");
+  await p.locator(".pet").dispatchEvent("pointerdown"); await p.waitForTimeout(300);
+  chk(`${name} なでると 場面が おわる`, (await p.locator('.pet[class*="scene-"]').count()) === 0);
   await menu("試作: 6000ほ あるいた");
   chk(`${name} 歩数が届く`, await p.getByText("6,000ほ ぶん").count()); await shot("06_delivery"); await fits("delivery"); await click("うけとる"); await p.waitForTimeout(250);
   chk(`${name} 歩数でも ごはんを 聞く`, await p.getByText("おにぎりが 買えるよ").count()); await click("あとで"); await p.waitForTimeout(200);
   chk(`${name} あとでで 消える`, (await p.getByText("おにぎりが 買えるよ").count()) === 0);
   await menu("試作: 1にち すすめる"); await p.waitForTimeout(400);
+  await p.waitForTimeout(3700); // なでた時の 一言が 終わるまで 待つ
+  chk(`${name} おなか0で 待っている時は 場面を 出さない`, (await p.locator('.pet[class*="scene-"]').count()) === 0);
   chk(`${name} きのうの 歩数を 覚えている`, await p.getByText("きのう 6,000ほも あるいたね").count()); await shot("06b_memory");
   for (let i = 0; i < 2; i++) await menu("試作: 1にち すすめる");
   chk(`${name} 3日放置でも 消えない`, (await p.getByText("いえで しちゃった").count()) === 0); await shot("07_after3days"); await fits("waiting");

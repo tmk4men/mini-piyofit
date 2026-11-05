@@ -4,14 +4,14 @@ import { outfitFit } from "../game/economy";
 import { asset } from "../asset";
 
 /** いまの段階の ぴよこ ＋ 着ている おしゃれ */
-export function PetFigure({ className = "", imgKey }: { className?: string; imgKey?: string | number }) {
+export function PetFigure({ className = "", imgKey, asleep = false }: { className?: string; imgKey?: string | number; asleep?: boolean }) {
   const pet = useGame((s) => s.pet);
   const wearing = useGame((s) => s.wearing);
   const stage = stageOf(pet);
-  const fit = wearing && stage.id !== "egg" ? outfitFit(wearing, stage.id) : null;
+  const fit = wearing && stage.id !== "egg" && !asleep ? outfitFit(wearing, stage.id) : null;
   return (
     <span className={`figure ${className}`}>
-      <img key={imgKey} className="figure-body" src={asset(stage.img)} alt={stage.label} draggable={false} />
+      <img key={imgKey} className="figure-body" src={asset(asleep ? "piyo_sleep.webp" : stage.img)} alt={stage.label} draggable={false} />
       {fit && (
         <img
           className="figure-outfit"
