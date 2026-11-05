@@ -4,7 +4,7 @@ import { stageOf } from "./game/rules";
 import { CLEAN_LINES, NO_POOP_LINES, PAT_LINES, pick } from "./game/lines";
 import { Room } from "./ui/Room";
 import { ExerciseScreen } from "./ui/ExerciseScreen";
-import { Confetti, HelpCard, OverlayLayer } from "./ui/Overlays";
+import { Confetti, HelpCard, MealOffer, OverlayLayer } from "./ui/Overlays";
 import { OutingPanel, ShopPanel } from "./ui/Panels";
 import { Menu } from "./ui/Menu";
 import {
@@ -124,6 +124,7 @@ export default function App() {
   const home = () => g().setMode("home");
 
   const firstMeal = useGame((s) => s.firstMeal);
+  const mealOffer = useGame((s) => s.mealOffer);
   useEffect(() => {
     if (firstMeal) askNotifyAfterMeal();
   }, [firstMeal]);
@@ -156,6 +157,7 @@ export default function App() {
             {mode === "food" && <ShopPanel foodOnly onClose={home} />}
             {mode === "outing" && <OutingPanel onClose={home} />}
             {!exercising && <OverlayLayer />}
+            {mealOffer && !top && !helpOpen && <MealOffer />}
             {!exercising && helpOpen && !top && (
               <HelpCard
                 onClose={() => {

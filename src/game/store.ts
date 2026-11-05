@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { dayLog, memoryLine, pruneHistory, type History } from "./memory";
 import { addReps, claimSteps, clean, FREE_REPS_LIMIT, newPet, pat, isEgg, STAGES, stageOf, tick, type Ending, type Pet, type Stage } from "./rules";
 import {
   BOND_TO_PROPOSE,
@@ -66,7 +67,14 @@ interface GameState {
   stepsClaimed: Record<string, number>;
   /** はじめて ごはんを あげた（通知の 許可は そのあとで 聞く） */
   firstMeal: boolean;
+  /** 日ごとの 記録。この子が 覚えている ひとことの もと */
+  history: History;
+  /** きょうの ひとこと */
+  memo: { day: string; text: string } | null;
   /** 保存しない一時状態 */
+  mealOffer: boolean;
+  offerMuted: boolean;
+  eating: { id: string; at: number } | null;
   mode: Mode;
   overlays: Overlay[];
   speech: { text: string; at: number } | null;
@@ -86,6 +94,10 @@ interface GameState {
   setMode: (m: Mode) => void;
   say: (text: string) => void;
   markHelpSeen: () => void;
+  openDay: (now?: number) => void;
+  acceptMeal: () => void;
+  declineMeal: () => void;
+  graduate: () => void;
   answerSteps: (allowed: boolean) => void;
   receiveSteps: (totals: { day: string; steps: number }[]) => void;
   showPaywall: () => void;
@@ -118,6 +130,10 @@ function finish(s: GameState, pet: Pet, ending: Ending, now: number): Partial<Ga
   };
 }
 
+/** おにぎりが 買えて、まだ たべられて、この子が 家に いる */
+const offerable = (pet: Pet, coins: number, muted: boolean) =>
+  !muted && !isEgg(pet) && !pet.away && coins >= FOODS[0].price && pet.hunger < 90;
+
 const restartEgg = (pet: Pet): Pet => ({ ...pet, bornAt: Date.now(), lastTick: Date.now() });
 
 export const outingsLeft = (s: Pick<GameState, "outings">) =>
@@ -141,6 +157,11 @@ export const useGame = create<GameState>()(
       stepsFrom: null,
       stepsClaimed: {},
       firstMeal: false,
+      history: {},
+      memo: null,
+      mealOffer: false,
+      offerMuted: false,
+      eating: null,
       mode: "home",
       overlays: [],
       speech: null,
@@ -166,7 +187,7 @@ export const useGame = create<GameState>()(
         if (!f || isEgg(s.pet)) return "full";
         if (!canEat(s.pet, f)) return "full";
         if (s.coins < f.price) return "poor";
-        set({ pet: eat(s.pet, f), coins: s.coins - f.price, firstMeal: true });
+        set({ pet: eat(s.pet, f), coins: s.coins - f.price, firstMeal: true, eating: { id, at: Date.now() } });
         return "ok";
       },
 
@@ -207,7 +228,47 @@ export const useGame = create<GameState>()(
         if (r.grew) overlays.push({ kind: "grew", stage: r.grew });
         const crossed = !s.paywallShown && r.pet.locked && r.pet.reps >= FREE_REPS_LIMIT;
         if (crossed) overlays.push({ kind: "paywall" });
-        set({ pet: r.pet, today, overlays, coins: s.coins + REP_COINS * n, paywallShown: s.paywallShown || !!crossed });
+        const coins = s.coins + REP_COINS * n;
+        const log = dayLog(s.history, day);
+        set({
+          pet: r.pet,
+          today,
+          overlays,
+          coins,
+          paywallShown: s.paywallShown || !!crossed,
+          history: { ...s.history, [day]: { ...log, reps: log.reps + n } },
+          mealOffer: offerable(r.pet, coins, s.offerMuted),
+        });
+      },
+
+      // ごはん代が たまった 瞬間に、その場で あげられる
+      acceptMeal: () => {
+        const s = get();
+        const r = s.buyFood(FOODS[0].id);
+        set({ mealOffer: false, mode: r === "ok" ? "home" : s.mode, speech: r === "ok" ? { text: "もぐもぐ…おいしい！", at: Date.now() } : s.speech });
+      },
+      declineMeal: () => set({ mealOffer: false, offerMuted: true }),
+
+      // その日 はじめて ひらいた ときだけ 覚えていることを 言う
+      openDay: (now = Date.now()) => {
+        const s = get();
+        const day = dayKey(now);
+        const log = dayLog(s.history, day);
+        if (log.hour != null) return;
+        const text = isEgg(s.pet) ? null : memoryLine(s.history, now);
+        set({
+          history: pruneHistory({ ...s.history, [day]: { ...log, hour: new Date(now).getHours() } }, now),
+          memo: text ? { day, text } : null,
+        });
+      },
+
+      // ひとりだちは 自分で きめる（時間で いなくならない）
+      graduate: () => {
+        const now = Date.now();
+        get().sync(now);
+        const s = get();
+        if (stageOf(s.pet).id !== "adult" || s.pet.away) return;
+        set(finish(s, s.pet, "leave", now));
       },
 
       answerSteps: (allowed) =>
@@ -229,7 +290,25 @@ export const useGame = create<GameState>()(
         // 2週間より 前の 記録は 要らないので 捨てる
         const keep = new Set(Array.from({ length: 14 }, (_, i) => dayKey(now - i * 86_400_000)));
         const stepsClaimed = Object.fromEntries(Object.entries(r.claimed).filter(([d]) => keep.has(d)));
-        set({ pet: g.pet, coins: s.coins + REP_COINS * r.units, stepsClaimed, overlays, paywallShown: s.paywallShown || !!crossed });
+        const history = { ...s.history };
+        for (const { day } of totals) {
+          const gain = (r.claimed[day] ?? 0) - (s.stepsClaimed[day] ?? 0);
+          if (gain > 0) {
+            const log = dayLog(history, day);
+            history[day] = { ...log, units: log.units + gain };
+          }
+        }
+        const coins = s.coins + REP_COINS * r.units;
+        set({
+          pet: g.pet,
+          coins,
+          stepsClaimed,
+          overlays,
+          history: pruneHistory(history, now),
+          paywallShown: s.paywallShown || !!crossed,
+          offerMuted: false,
+          mealOffer: offerable(g.pet, coins, false),
+        });
       },
 
       showPaywall: () => {
@@ -253,8 +332,22 @@ export const useGame = create<GameState>()(
       devAdvance: (hours) => {
         const s = get();
         const ms = hours * 3_600_000;
-        set({ pet: { ...s.pet, lastTick: s.pet.lastTick - ms, bornAt: s.pet.bornAt - ms, adultAt: s.pet.adultAt ? s.pet.adultAt - ms : s.pet.adultAt, zeroSince: s.pet.zeroSince ? s.pet.zeroSince - ms : s.pet.zeroSince, away: s.pet.away ? { ...s.pet.away, since: s.pet.away.since - ms } : s.pet.away } });
+        const shift = <T,>(o: Record<string, T>) => {
+          const now = Date.now();
+          const back: Record<string, T> = {};
+          for (let i = 0; i < 40; i++) {
+            const v = o[dayKey(now - i * 86_400_000)];
+            if (v !== undefined) back[dayKey(now - i * 86_400_000 - ms)] = v;
+          }
+          return back;
+        };
+        set({
+          pet: { ...s.pet, lastTick: s.pet.lastTick - ms, bornAt: s.pet.bornAt - ms, adultAt: s.pet.adultAt ? s.pet.adultAt - ms : s.pet.adultAt, zeroSince: s.pet.zeroSince ? s.pet.zeroSince - ms : s.pet.zeroSince, away: s.pet.away ? { ...s.pet.away, since: s.pet.away.since - ms } : s.pet.away },
+          history: shift(s.history),
+          stepsClaimed: shift(s.stepsClaimed),
+        });
         get().sync();
+        get().openDay();
       },
 
       goOuting: (id) => {
@@ -306,7 +399,7 @@ export const useGame = create<GameState>()(
         const pet = closed?.kind === "ending" && isEgg(s.pet) ? restartEgg(s.pet) : s.pet;
         set({ overlays: s.overlays.slice(1), pet });
       },
-      setMode: (mode) => set({ mode }),
+      setMode: (mode) => set(mode === "exercise" ? { mode, offerMuted: false } : { mode }),
       say: (text) => set({ speech: { text, at: Date.now() } }),
       // はじめての 遊び方を とじた ときから たまごの 10秒を かぞえる
       markHelpSeen: () => set({ seenHelp: true, pet: isEgg(get().pet) ? restartEgg(get().pet) : get().pet }),
@@ -318,6 +411,10 @@ export const useGame = create<GameState>()(
           stepsClaimed: {},
           paywallShown: false,
           firstMeal: false,
+          history: {},
+          memo: null,
+          mealOffer: false,
+          offerMuted: false,
           coins: START_COINS,
           owned: [],
           playBest: 0,
@@ -349,6 +446,8 @@ export const useGame = create<GameState>()(
         stepsFrom: s.stepsFrom,
         stepsClaimed: s.stepsClaimed,
         firstMeal: s.firstMeal,
+        history: s.history,
+        memo: s.memo,
       }),
       // v1（コインなし版）を あそんでいた人には はじめの コインを わたす
       migrate: (old, version) => {

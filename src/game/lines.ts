@@ -16,7 +16,7 @@ export function idleLine(pet: Pet): string {
   if (stage.id === "adult") {
     if (pet.partner && pet.partner.bond >= 3) return `${pet.partner.name}に プロポーズ したいな`;
     if (pet.partner) return `${pet.partner.name}に また あいたいな`;
-    return pick(["であいの おうちに いってみたい", "スーツ にあう？", "そろそろ ひとりだち かな"]);
+    return pick(["であいの おうちに いってみたい", "スーツ にあう？", "ずっと いっしょに いようね"]);
   }
   return pick([
     "きょうも いっしょに うごこ！",

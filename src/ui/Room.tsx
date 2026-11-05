@@ -3,7 +3,7 @@ import { useGame, todayReps } from "../game/store";
 import { COMEBACK_REPS, growthReps, HATCH_AFTER_MS, hearts, isAtPaywall, nextStageOf, stageFor, stageOf } from "../game/rules";
 import { FOODS, REP_COINS } from "../game/economy";
 import { idleLine } from "../game/lines";
-import { IconHand, IconHeart, IconSparkle } from "./icons";
+import { IconBento, IconCake, IconHand, IconHeart, IconOnigiri, IconSparkle } from "./icons";
 import { PetFigure } from "./PetFigure";
 import { asset } from "../asset";
 
@@ -39,6 +39,9 @@ export function Room({ onPat }: { onPat: () => void }) {
   const speech = useGame((s) => s.speech);
   const today = useGame(todayReps);
   const coins = useGame((s) => s.coins);
+  const memo = useGame((s) => s.memo);
+  const eating = useGame((s) => s.eating);
+  const blockedByCard = useGame((s) => s.overlays.length > 0 || s.mealOffer);
   const showPaywall = useGame((s) => s.showPaywall);
   const stage = stageOf(pet);
   const next = nextStageOf(pet);
@@ -62,7 +65,27 @@ export function Room({ onPat }: { onPat: () => void }) {
     const t = setTimeout(() => force((x) => x + 1), 3600);
     return () => clearTimeout(t);
   }, [speech]);
-  const line = fresh ? speech!.text : idle;
+  // きょうの ひとことは、カードが 閉じてから 25秒 見せる
+  const [memoUntil, setMemoUntil] = useState(0);
+  const memoShown = useRef<string | null>(null);
+  useEffect(() => {
+    if (!memo || blockedByCard || memoShown.current === memo.day) return;
+    memoShown.current = memo.day;
+    setMemoUntil(Date.now() + 25000);
+    const t = setTimeout(() => setMemoUntil(0), 25000);
+    return () => clearTimeout(t);
+  }, [memo, blockedByCard]);
+  const line = fresh ? speech!.text : memo && memoUntil > Date.now() ? memo.text : idle;
+
+  // ごはんを たべる ところを 見せる
+  const [meal, setMeal] = useState<string | null>(null);
+  useEffect(() => {
+    if (!eating || Date.now() - eating.at > 1500) return;
+    setMeal(eating.id);
+    setBump((b) => b + 1);
+    const t = setTimeout(() => setMeal(null), 1300);
+    return () => clearTimeout(t);
+  }, [eating]);
 
   const isEgg = stage.id === "egg";
   const weak = !isEgg && (pet.hunger < 10 || pet.mood < 10);
@@ -167,6 +190,11 @@ export function Room({ onPat }: { onPat: () => void }) {
               <PetFigure className={`pet-img${walk.walking ? " is-walking" : ""}`} />
             </span>
           </span>
+          {meal && (
+            <span className="eat-food" aria-hidden="true">
+              {meal === "bento" ? <IconBento size={46} /> : meal === "cake" ? <IconCake size={46} /> : <IconOnigiri size={46} />}
+            </span>
+          )}
           {floaters.map((f) => (
             <span
               key={`f${f.id}`}
@@ -195,7 +223,7 @@ export function Room({ onPat }: { onPat: () => void }) {
         )}
         <div className="growth-row">
           <span className="growth-label">
-            {isEgg ? "もうすぐ うまれる" : pet.away ? "おでかけ中。むかえに いこう" : needMeal ? "ごはん代まで" : paywall ? `つぎは ${next?.label ?? ""}` : next ? `つぎは ${next.label}` : "ひとりだち まで もうすこし"}
+            {isEgg ? "もうすぐ うまれる" : pet.away ? "おでかけ中。むかえに いこう" : needMeal ? "ごはん代まで" : paywall ? `つぎは ${next?.label ?? ""}` : next ? `つぎは ${next.label}` : "おとなに なった。ずっと いっしょ"}
           </span>
           <span className="growth-left">
             {isEgg ? "" : pet.away ? `あと ${COMEBACK_REPS - pet.away.reps}かい` : needMeal ? `あと ${Math.ceil((mealPrice - coins) / REP_COINS)}かい` : paywall ? "" : next ? `あと ${next.at - grown}かい` : ""}

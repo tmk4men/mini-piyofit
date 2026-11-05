@@ -22,14 +22,19 @@ export function hungryAt(hunger: number, now: number): number {
 }
 
 export async function onOpen(): Promise<void> {
-  if (!isNative()) return;
   const g = useGame.getState;
+  // きのうの 歩数を 受け取ってから 覚えていることを 言う
+  if (!isNative()) {
+    g().openDay();
+    return;
+  }
   if (!g().unlocked && (await isEntitled())) g().unlock();
   const from = g().stepsFrom;
   if (from) {
     const days = await dailySteps(from);
     if (days.length) g().receiveSteps(days);
   }
+  g().openDay();
 }
 
 export async function onLeave(): Promise<void> {

@@ -12,8 +12,6 @@ export const POOP_MAX = 3;
 export const AWAY_AFTER_H = 48;
 /** うんどう（または 歩数）これだけで むかえに いける */
 export const COMEBACK_REPS = 5;
-/** おとなになってから（けっこん しなければ）ひとりだちするまで */
-export const LEAVE_AFTER_H = 168;
 /** 無料で そだつのは ここの 手前まで。回数は ためたまま */
 export const FREE_REPS_LIMIT = 100;
 /** 1000歩で 1かいぶん。1日 10かいぶんまで */
@@ -170,10 +168,6 @@ export function tick(pet: Pet, now: number): { pet: Pet; ending: Ending | null; 
       p.away = { since: t, reps: 0 };
       p.zeroSince = null;
       continue;
-    }
-    if (p.adultAt != null && t - p.adultAt >= LEAVE_AFTER_H * HOUR) {
-      p.lastTick = t;
-      return { pet: p, ending: "leave", hatched };
     }
   }
   p.lastTick = now;

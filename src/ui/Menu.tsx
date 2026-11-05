@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useGame } from "../game/store";
+import { dayKey, useGame } from "../game/store";
 import { isBgmMuted, isSfxMuted, toggleBgm, toggleSfx } from "../sfx/bgm";
 import { IconBook, IconClose, IconMusic, IconQuestion, IconRestart, IconSpeaker } from "./icons";
 import { asset } from "../asset";
-import { isAtPaywall } from "../game/rules";
+import { isAtPaywall, stageOf } from "../game/rules";
 import { isNative, restoreUnlock } from "../native/bridge";
 
-type View = "menu" | "album" | "reset";
+type View = "menu" | "album" | "reset" | "leave";
 
 export function Menu({ onClose, onHelp }: { onClose: () => void; onHelp: () => void }) {
   const [view, setView] = useState<View>("menu");
@@ -24,7 +24,7 @@ export function Menu({ onClose, onHelp }: { onClose: () => void; onHelp: () => v
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <div className="sheet-head">
-          <h2>{view === "album" ? "アルバム" : view === "reset" ? "はじめから" : "メニュー"}</h2>
+          <h2>{view === "album" ? "アルバム" : view === "reset" ? "はじめから" : view === "leave" ? "ひとりだち" : "メニュー"}</h2>
           <button type="button" className="icon-btn" onClick={view === "menu" ? onClose : () => setView("menu")} aria-label="とじる">
             <IconClose />
           </button>
@@ -91,12 +91,19 @@ export function Menu({ onClose, onHelp }: { onClose: () => void; onHelp: () => v
             </li>
             {!isNative() && (
               <>
-                <li><button type="button" onClick={() => { g().receiveSteps([{ day: `試作${Date.now()}`, steps: 6000 }]); onClose(); }}><IconSpeaker /> 試作: 6000ほ あるいた</button></li>
+                <li><button type="button" onClick={() => { const day = dayKey(Date.now()); g().receiveSteps([{ day, steps: (g().stepsClaimed[day] ?? 0) * 1000 + 6000 }]); onClose(); }}><IconSpeaker /> 試作: 6000ほ あるいた</button></li>
                 <li><button type="button" onClick={() => { g().devAdvance(24); onClose(); }}><IconRestart /> 試作: 1にち すすめる</button></li>
                 <li><button type="button" onClick={() => { g().exercise(5); onClose(); }}><IconRestart /> 試作: 5かい うごいた</button></li>
               </>
             )}
             {note && <li><p className="menu-note">{note}</p></li>}
+            {stageOf(pet).id === "adult" && !pet.away && (
+              <li>
+                <button type="button" onClick={() => setView("leave")}>
+                  <IconBook /> ひとりだち させる
+                </button>
+              </li>
+            )}
             <li>
               <button type="button" className="danger" onClick={() => setView("reset")}>
                 <IconRestart /> はじめから
@@ -125,6 +132,14 @@ export function Menu({ onClose, onHelp }: { onClose: () => void; onHelp: () => v
               ))}
             </ul>
           ))}
+
+        {view === "leave" && (
+          <div className="reset">
+            <p>{pet.name || "この子"}を おくりだすと、アルバムに のこって、つぎの たまごを むかえるよ。きめなければ ずっと いっしょ。</p>
+            <button type="button" className="pill" onClick={() => { g().graduate(); onClose(); }}>おくりだす</button>
+            <button type="button" className="text-btn" onClick={() => setView("menu")}>まだ いっしょに いる</button>
+          </div>
+        )}
 
         {view === "reset" && (
           <div className="reset">

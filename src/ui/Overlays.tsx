@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useGame, type Overlay } from "../game/store";
-import { playCheerSfx } from "../sfx/sfx";
+import { playCheerSfx, playEatingSfx } from "../sfx/sfx";
 import { useEffect } from "react";
 import { WEDDING_GIFT, REP_COINS } from "../game/economy";
 import { asset } from "../asset";
@@ -57,7 +57,7 @@ function GrewCard({ o, onClose }: { o: Extract<Overlay, { kind: "grew" }>; onClo
       <img className="card-img pop" src={asset(adult ? "piyo_ending.webp" : o.stage.img)} alt="" />
       <p className="card-kicker">{hatched ? "たまごが" : adult ? "そつぎょう" : "おおきくなった"}</p>
       <h2 className="card-title">{hatched ? "かえった！" : `${o.stage.label}に なった！`}</h2>
-      {adult && <p className="card-text">おでかけの「であいの おうち」に いけるように なったよ。3にち たつと ひとりだち するみたい</p>}
+      {adult && <p className="card-text">おでかけの「であいの おうち」に いけるように なったよ。ひとりだちは じぶんで きめられる。ずっと いっしょでも いいよ</p>}
       <button type="button" className="pill" onClick={onClose}>
         やったね
       </button>
@@ -226,6 +226,23 @@ function PaywallCard({ onClose }: { onClose: () => void }) {
       <div className="card-links">
         <button type="button" className="text-btn" disabled={busy} onClick={onClose}>いまは いい</button>
         <button type="button" className="text-btn" disabled={busy} onClick={() => void run(restoreUnlock, "ふくげん できなかったよ")}>買った人は こちら</button>
+      </div>
+    </div>
+  );
+}
+
+export function MealOffer() {
+  const accept = useGame((s) => s.acceptMeal);
+  const decline = useGame((s) => s.declineMeal);
+  const name = useGame((s) => s.pet.name) || "この子";
+  return (
+    <div className="screen-overlay" role="dialog" aria-modal="true">
+      <div className="card card-meal">
+        <PetFigure className="card-figure" />
+        <p className="card-kicker">おにぎりが 買えるよ</p>
+        <h2 className="card-title">{name}に あげる？</h2>
+        <button type="button" className="pill" onClick={() => { accept(); playEatingSfx(); }}>あげる</button>
+        <button type="button" className="text-btn" onClick={decline}>あとで</button>
       </div>
     </div>
   );

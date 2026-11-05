@@ -808,3 +808,8 @@ button:disabled { cursor: default; }
 .away-note .letter { width: 168px; height: auto; padding: 22px 12px; white-space: nowrap; text-align: center; }
 .card .text-btn { display: block; margin-left: auto; margin-right: auto; }
 .card-links .text-btn { margin: 0; }
+
+.eat-food { position: absolute; left: 50%; top: 18%; z-index: 3; animation: eat-food 1.2s ease-in forwards; pointer-events: none; }
+@keyframes eat-food { 0% { transform: translate(-50%, -46px) scale(1); opacity: 1; } 55% { transform: translate(-50%, 22px) scale(1); opacity: 1; } 75% { transform: translate(-50%, 26px) scale(.62) rotate(-8deg); opacity: 1; } 100% { transform: translate(-50%, 30px) scale(.2); opacity: 0; } }
+.card-meal .pill { min-width: 180px; }
+.reset .text-btn { display: block; margin: 4px auto 0; }
