@@ -18,7 +18,7 @@ export interface Scene {
 export const SCENES: Record<SceneId, Scene> = {
   nap: { id: "nap", line: "…すぅ…すぅ", woke: "…はっ。おかえり", x: 50 },
   window: { id: "window", line: "そと みてた", woke: "あ、おかえり！", x: 50 },
-  box: { id: "box", line: "はこ みつけた！", woke: "はいってみたかった", x: 56, prop: { img: "cardboard.png", x: 34 } },
+  box: { id: "box", line: "はこ みつけた！", woke: "はいってみたかった", x: 56, prop: { img: "cardboard.webp", x: 34 } },
   chair: { id: "chair", line: "すわれない…", woke: "おしりが とどかない", x: 40, prop: { img: "furniture_chair.webp", x: 66 } },
   toilet: { id: "toilet", line: "れんしゅう ちゅう", woke: "み、みないで", x: 38, prop: { img: "furniture_toilet.webp", x: 68 } },
   squat: { id: "squat", line: "スクワットの まね", woke: "みてた？ できてた？", x: 50 },
