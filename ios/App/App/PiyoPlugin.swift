@@ -22,8 +22,8 @@ public class PiyoPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "pushWidget", returnType: CAPPluginReturnPromise),
     ]
 
-    static let productId = "app.piyogohan.unlock"
-    static let appGroup = "group.app.piyogohan.app"
+    static let productId = "app.piyofit.mini.unlock"
+    static let appGroup = "group.app.piyofit.mini"
 
     private let health = HKHealthStore()
     private var stepType: HKQuantityType { HKQuantityType.quantityType(forIdentifier: .stepCount)! }

@@ -15,7 +15,7 @@ struct PiyoEntry: TimelineEntry {
 
 struct PiyoProvider: TimelineProvider {
     func load(at date: Date) -> PiyoEntry {
-        let d = UserDefaults(suiteName: "group.app.piyogohan.app")?.dictionary(forKey: "pet")
+        let d = UserDefaults(suiteName: "group.app.piyofit.mini")?.dictionary(forKey: "pet")
         guard let d else { return PiyoEntry(date: date, name: "", image: "piyo", hunger: 70, away: false, hasPet: false) }
         let savedAt = (d["at"] as? Double ?? 0) / 1000
         let hours = max(0, date.timeIntervalSince1970 - savedAt) / 3600
@@ -82,7 +82,7 @@ struct PiyoWidget: Widget {
                 PiyoWidgetView(entry: entry).background(bg)
             }
         }
-        .configurationDisplayName("ぴよごはん")
+        .configurationDisplayName("ミニぴよふぃっと")
         .description("ホーム画面で いつも いっしょ")
         .supportedFamilies([.systemSmall])
     }

@@ -3,5 +3,5 @@
 <plist version="1.0"><dict>
 <key>com.apple.developer.healthkit</key><true/>
 <key>com.apple.developer.healthkit.access</key><array/>
-<key>com.apple.security.application-groups</key><array><string>group.app.piyogohan.app</string></array>
+<key>com.apple.security.application-groups</key><array><string>group.app.piyofit.mini</string></array>
 </dict></plist>

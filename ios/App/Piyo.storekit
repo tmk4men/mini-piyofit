@@ -9,7 +9,7 @@
       "localizations" : [
         { "description" : "おとなまでの成長、けっこん、次の世代", "displayName" : "つづきを そだてる", "locale" : "ja_JP" }
       ],
-      "productID" : "app.piyogohan.unlock",
+      "productID" : "app.piyofit.mini.unlock",
       "referenceName" : "unlock",
       "type" : "NonConsumable"
     }
